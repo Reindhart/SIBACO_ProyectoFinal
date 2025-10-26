@@ -1,0 +1,11 @@
+-r requirements.txt
+
+# --- Desarrollo ---
+python-dotenv==1.1.1
+watchdog==6.0.0
+
+# --- Testing y calidad de código ---
+pytest==8.4.2
+black==25.9.0
+ruff==0.14.2
+pre-commit==4.3.0

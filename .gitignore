@@ -1,0 +1,24 @@
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-*
+
+# Logs
+*.log
+logs/
+
+# Variables de entorno
+.env
+.env.local
+.env.*.local
+
+# Carpetas de compilación
+dist/
+build/
