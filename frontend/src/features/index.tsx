@@ -1,187 +1,191 @@
-import { useEffect, useState } from 'react'
+import { Link } from '@tanstack/react-router'
+import { useAuth } from '@/lib/auth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-
-interface ApiResponse {
-  status: string
-  message: string
-  version?: string
-}
-
-type ConnectionStatus = 'idle' | 'loading' | 'success' | 'error'
+import { 
+  ShieldCheck, 
+  LogIn, 
+  UserPlus, 
+  CheckCircle, 
+  TrendingUp,
+  ClipboardCheck,
+  Lightbulb,
+  FileText,
+  BarChart3,
+  Code,
+  Server
+} from 'lucide-react'
 
 export default function Index() {
-  const [message, setMessage] = useState<string>('')
-  const [status, setStatus] = useState<ConnectionStatus>('idle')
-  const [error, setError] = useState<string | null>(null)
+  const { isAuthenticated, user, isLoading } = useAuth()
 
-  const fetchMessage = async () => {
-    setStatus('loading')
-    setError(null)
-    setMessage('')
-    
-    try {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 5000)
-      
-      const response = await fetch('/api/', {
-        signal: controller.signal,
-        headers: {
-          'Accept': 'application/json',
-        }
-      })
-      
-      clearTimeout(timeoutId)
-      
-      if (!response.ok) {
-        throw new Error(`Error del servidor: ${response.status} ${response.statusText}`)
-      }
-      
-      const contentType = response.headers.get('content-type')
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error('El servidor no devolvió JSON. Verifica que el backend esté corriendo.')
-      }
-      
-      const data: ApiResponse = await response.json()
-      
-      if (!data.message) {
-        throw new Error('Respuesta del servidor incompleta')
-      }
-      
-      setMessage(data.message)
-      setStatus('success')
-    } catch (err) {
-      if (err instanceof Error) {
-        if (err.name === 'AbortError') {
-          setError('Timeout: El servidor no responde. Verifica que el backend esté corriendo.')
-        } else {
-          setError(err.message)
-        }
-      } else {
-        setError('Error desconocido al conectar con el servidor')
-      }
-      setStatus('error')
-    }
+  // Mostrar spinner mientras carga
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <span className="loading loading-spinner loading-lg"></span>
+      </div>
+    )
   }
 
-  useEffect(() => {
-    fetchMessage()
-  }, [])
-
+  // Si está autenticado, mostrar enlace al dashboard en vez de formularios
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-200px)] p-4">
-      <Card className="w-full max-w-2xl shadow-xl">
-        <CardHeader className="text-center space-y-2">
-          <CardTitle className="text-4xl font-bold">
-            Bienvenido
-          </CardTitle>
-          <CardDescription className="text-lg">
-            Plantilla React + Flask
-          </CardDescription>
-        </CardHeader>
+    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] p-4 space-y-8">
+      {/* Hero Section */}
+      <div className="text-center space-y-4 max-w-3xl">
+        <div className="flex justify-center mb-6">
+          <div className="w-24 h-24 bg-primary rounded-full flex items-center justify-center shadow-2xl">
+            <ShieldCheck className="h-16 w-16 text-primary-content" />
+          </div>
+        </div>
         
-        <CardContent className="space-y-6">
-          {/* Estado de Conexión */}
-          <div className="flex flex-col items-center gap-4">
-            {status === 'loading' && (
-              <div className="flex flex-col items-center gap-3">
-                <span className="loading loading-spinner loading-lg text-primary"></span>
-                <p className="text-base">Conectando con el servidor...</p>
-              </div>
-            )}
-            
-            {status === 'error' && error && (
-              <div className="alert alert-error shadow-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div>
-                  <h3 className="font-bold">Error de conexión</h3>
-                  <div className="text-sm">{error}</div>
-                </div>
-              </div>
-            )}
-            
-            {status === 'success' && message && (
-              <div className="w-full space-y-4">
-                <div className="alert alert-success shadow-lg">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>Conexión exitosa con el backend</span>
-                </div>
-                
-                <div className="card bg-base-200 shadow-xl">
-                  <div className="card-body items-center">
-                    <div className="badge badge-success badge-lg mb-2">API Activa</div>
-                    <h2 className="card-title text-3xl text-center">
-                      {message}
-                    </h2>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+        <h1 className="text-5xl font-bold bg-linear-to-r from-primary to-secondary bg-clip-text text-transparent">
+          Sistema de Diagnóstico Médico
+        </h1>
+        
+        <p className="text-xl text-base-content/70">
+          Motor de Inferencia para Diagnóstico Clínico Inteligente
+        </p>
 
-          {/* Botón de Reconexión */}
-          <div className="flex justify-center">
-            <Button 
-              onClick={fetchMessage} 
-              disabled={status === 'loading'}
-              size="lg"
-              className="gap-2"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
-              </svg>
-              {status === 'loading' ? 'Conectando...' : status === 'error' ? 'Reintentar' : 'Reconectar'}
-            </Button>
-          </div>
+        <div className="divider"></div>
 
-          <div className="divider">Tecnologías</div>
+        <p className="text-lg leading-relaxed">
+          Sistema experto basado en conocimientos que ayuda a los profesionales de la salud 
+          en el proceso de diagnóstico médico mediante análisis de <strong>síntomas</strong>, 
+          <strong> signos clínicos</strong>, <strong>pruebas de laboratorio</strong> y 
+          <strong> estudios post-mortem</strong>.
+        </p>
+
+        {isAuthenticated ? (
+          <div className="space-y-4 pt-6">
+            <div className="alert alert-success">
+              <CheckCircle className="h-6 w-6" />
+              <span>Bienvenido, <strong>{user?.full_name || user?.username}</strong></span>
+            </div>
+            <Link to="/dashboard">
+              <Button size="lg" className="gap-2">
+                <TrendingUp className="h-5 w-5" />
+                Ir al Dashboard
+              </Button>
+            </Link>
+          </div>
+        ) : (
+          <div className="flex gap-4 justify-center pt-6">
+            <Link to="/sign-in">
+              <Button size="lg" className="gap-2">
+                <LogIn className="h-5 w-5" />
+                Iniciar Sesión
+              </Button>
+            </Link>
+            <Link to="/sign-up">
+              <Button variant="outline" size="lg" className="gap-2">
+                <UserPlus className="h-5 w-5" />
+                Crear Cuenta
+              </Button>
+            </Link>
+          </div>
+        )}
+      </div>
+
+      {/* Características del Sistema */}
+      <div className="w-full max-w-6xl">
+        <h2 className="text-3xl font-bold text-center mb-8">Características del Sistema</h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Feature 1 */}
+          <Card className="shadow-xl hover:shadow-2xl transition-shadow">
+            <CardHeader>
+              <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+                <ClipboardCheck className="h-6 w-6 text-primary" />
+              </div>
+              <CardTitle className="text-lg">Gestión de Pacientes</CardTitle>
+              <CardDescription>
+                Registro completo de información médica, historial y datos demográficos de cada paciente.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          {/* Feature 2 */}
+          <Card className="shadow-xl hover:shadow-2xl transition-shadow">
+            <CardHeader>
+              <div className="w-12 h-12 bg-secondary/10 rounded-lg flex items-center justify-center mb-4">
+                <Lightbulb className="h-6 w-6 text-secondary" />
+              </div>
+              <CardTitle className="text-lg">Motor de Inferencia</CardTitle>
+              <CardDescription>
+                Algoritmo inteligente que analiza síntomas, signos y pruebas para sugerir diagnósticos probables.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          {/* Feature 3 */}
+          <Card className="shadow-xl hover:shadow-2xl transition-shadow">
+            <CardHeader>
+              <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center mb-4">
+                <FileText className="h-6 w-6 text-accent" />
+              </div>
+              <CardTitle className="text-lg">Base de Conocimientos</CardTitle>
+              <CardDescription>
+                Amplio catálogo de enfermedades, síntomas, signos clínicos y pruebas diagnósticas.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          {/* Feature 4 */}
+          <Card className="shadow-xl hover:shadow-2xl transition-shadow">
+            <CardHeader>
+              <div className="w-12 h-12 bg-info/10 rounded-lg flex items-center justify-center mb-4">
+                <BarChart3 className="h-6 w-6 text-info" />
+              </div>
+              <CardTitle className="text-lg">Seguimiento Clínico</CardTitle>
+              <CardDescription>
+                Historial detallado de diagnósticos, tratamientos y evolución de cada paciente.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
+      </div>
+
+      {/* Tecnologías */}
+      <div className="w-full max-w-4xl pt-8">
+        <div className="divider">Tecnologías Utilizadas</div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card className="bg-base-200 shadow-xl">
+            <CardContent className="pt-6">
+              <h3 className="card-title text-primary mb-4">
+                <Code className="h-6 w-6" />
+                Frontend
+              </h3>
+              <ul className="space-y-2">
+                {['React 19 + TypeScript', 'TanStack Router', 'Tailwind CSS v4', 'DaisyUI + shadcn/ui'].map((tech) => (
+                  <li key={tech} className="flex items-center gap-2">
+                    <div className="badge badge-primary badge-sm"></div>
+                    <span className="text-sm">{tech}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
           
-          {/* Grid de Tecnologías */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="card bg-base-200 shadow-xl">
-              <div className="card-body">
-                <h3 className="card-title text-primary">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                  </svg>
-                  Frontend
-                </h3>
-                <ul className="space-y-1">
-                  {['React 19', 'TypeScript', 'TanStack Router', 'Tailwind CSS v4', 'DaisyUI', 'shadcn/ui'].map((tech) => (
-                    <li key={tech} className="flex items-center gap-2">
-                      <div className="badge badge-primary badge-sm"></div>
-                      <span className="text-sm">{tech}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-            
-            <div className="card bg-base-200 shadow-xl">
-              <div className="card-body">
-                <h3 className="card-title text-secondary">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
-                  </svg>
-                  Backend
-                </h3>
-                <ul className="space-y-1">
-                  {['Flask 3', 'SQLAlchemy', 'Flask-JWT-Extended', 'Flask-CORS', 'PostgreSQL', 'Python-dotenv'].map((tech) => (
-                    <li key={tech} className="flex items-center gap-2">
-                      <div className="badge badge-secondary badge-sm"></div>
-                      <span className="text-sm">{tech}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          <Card className="bg-base-200 shadow-xl">
+            <CardContent className="pt-6">
+              <h3 className="card-title text-secondary mb-4">
+                <Server className="h-6 w-6" />
+                Backend
+              </h3>
+              <ul className="space-y-2">
+                {['Flask 3 + Python', 'SQLAlchemy + SQLite', 'JWT Authentication', 'Motor de Inferencia'].map((tech) => (
+                  <li key={tech} className="flex items-center gap-2">
+                    <div className="badge badge-secondary badge-sm"></div>
+                    <span className="text-sm">{tech}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   )
 }

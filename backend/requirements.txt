@@ -10,7 +10,12 @@ Flask-Limiter==4.0.0
 # --- Base de datos ---
 flask-sqlalchemy==3.1.1
 flask-migrate==4.1.0
-psycopg==3.2.11
+
+# Drivers para diferentes bases de datos
+psycopg==3.2.11           # PostgreSQL
+pymysql==1.1.2            # MySQL/MariaDB
+cx-Oracle==8.3.0          # Oracle
+pyodbc==5.3.0             # SQL Server
 
 # --- Validación y serialización ---
 email-validator==2.3.0

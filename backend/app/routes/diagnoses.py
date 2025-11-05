@@ -1,0 +1,324 @@
+from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from app.extensions import db
+from app.models.diagnosis import Diagnosis
+from app.models.patient import Patient
+from app.models.user import User
+from app.models.medical_knowledge import Disease
+from datetime import datetime
+
+diagnoses_bp = Blueprint('diagnoses', __name__, url_prefix='/api')
+
+def is_doctor(current_user_id):
+    """Helper para verificar si el usuario actual es doctor"""
+    user = db.session.get(User, int(current_user_id))
+    return user and user.role in ['admin', 'doctor']
+
+def can_access_patient(current_user_id, patient_id):
+    """Verificar si el usuario puede acceder al paciente"""
+    user = db.session.get(User, int(current_user_id))
+    if not user:
+        return False
+    
+    if user.role == 'admin':
+        return True
+    
+    patient = db.session.get(Patient, patient_id)
+    return patient and patient.doctor_id == int(current_user_id)
+
+@diagnoses_bp.route('/patients/<int:patient_id>/diagnoses', methods=['GET'])
+@jwt_required()
+def get_patient_diagnoses(patient_id):
+    """Obtener todos los diagnósticos de un paciente"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        
+        # Verificar acceso al paciente
+        if not can_access_patient(current_user_id, patient_id):
+            return jsonify({'status': 'error', 'message': 'No autorizado'}), 403
+        
+        patient = db.session.get(Patient, patient_id)
+        if not patient or not patient.is_active:
+            return jsonify({'status': 'error', 'message': 'Paciente no encontrado'}), 404
+        
+        # Obtener diagnósticos con relaciones
+        diagnoses = Diagnosis.query.filter_by(patient_id=patient_id).order_by(Diagnosis.diagnosis_date.desc()).all()
+        
+        diagnoses_data = []
+        for d in diagnoses:
+            # Obtener información del doctor
+            doctor = db.session.get(User, d.doctor_id)
+            doctor_data = {
+                'id': doctor.id,
+                'username': doctor.username,
+                'first_name': doctor.first_name,
+                'last_name': doctor.last_name
+            } if doctor else None
+            
+            # Obtener información de la enfermedad
+            disease = db.session.get(Disease, d.disease_code)
+            disease_data = {
+                'code': disease.code,
+                'name': disease.name,
+                'description': disease.description
+            } if disease else None
+            
+            diagnoses_data.append({
+                'id': d.id,
+                'patient_id': d.patient_id,
+                'doctor_id': d.doctor_id,
+                'disease_code': d.disease_code,
+                'diagnosis_date': d.diagnosis_date.isoformat() if d.diagnosis_date else None,
+                'symptoms_presented': d.symptoms_presented,
+                'signs_observed': d.signs_observed,
+                'lab_results': d.lab_results,
+                'confidence_score': d.confidence_score,
+                'inference_details': d.inference_details,
+                'alternative_diseases': d.alternative_diseases,
+                'treatment': d.treatment,
+                'treatment_start_date': d.treatment_start_date.isoformat() if d.treatment_start_date else None,
+                'treatment_end_date': d.treatment_end_date.isoformat() if d.treatment_end_date else None,
+                'notes': d.notes,
+                'status': d.status,
+                'follow_up_date': d.follow_up_date.isoformat() if d.follow_up_date else None,
+                'created_at': d.created_at.isoformat() if d.created_at else None,
+                'updated_at': d.updated_at.isoformat() if d.updated_at else None,
+                'doctor': doctor_data,
+                'disease': disease_data
+            })
+        
+        return jsonify({'status': 'success', 'data': diagnoses_data}), 200
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@diagnoses_bp.route('/diagnoses/<int:diagnosis_id>', methods=['GET'])
+@jwt_required()
+def get_diagnosis(diagnosis_id):
+    """Obtener un diagnóstico específico con todas sus relaciones"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        
+        diagnosis = db.session.get(Diagnosis, diagnosis_id)
+        if not diagnosis:
+            return jsonify({'status': 'error', 'message': 'Diagnóstico no encontrado'}), 404
+        
+        # Verificar acceso
+        if not can_access_patient(current_user_id, diagnosis.patient_id):
+            return jsonify({'status': 'error', 'message': 'No autorizado'}), 403
+        
+        # Obtener relaciones
+        doctor = db.session.get(User, diagnosis.doctor_id)
+        disease = db.session.get(Disease, diagnosis.disease_code)
+        patient = db.session.get(Patient, diagnosis.patient_id)
+        
+        diagnosis_data = {
+            'id': diagnosis.id,
+            'patient_id': diagnosis.patient_id,
+            'doctor_id': diagnosis.doctor_id,
+            'disease_code': diagnosis.disease_code,
+            'diagnosis_date': diagnosis.diagnosis_date.isoformat() if diagnosis.diagnosis_date else None,
+            'symptoms_presented': diagnosis.symptoms_presented,
+            'signs_observed': diagnosis.signs_observed,
+            'lab_results': diagnosis.lab_results,
+            'confidence_score': diagnosis.confidence_score,
+            'inference_details': diagnosis.inference_details,
+            'alternative_diseases': diagnosis.alternative_diseases,
+            'treatment': diagnosis.treatment,
+            'treatment_start_date': diagnosis.treatment_start_date.isoformat() if diagnosis.treatment_start_date else None,
+            'treatment_end_date': diagnosis.treatment_end_date.isoformat() if diagnosis.treatment_end_date else None,
+            'notes': diagnosis.notes,
+            'status': diagnosis.status,
+            'follow_up_date': diagnosis.follow_up_date.isoformat() if diagnosis.follow_up_date else None,
+            'created_at': diagnosis.created_at.isoformat() if diagnosis.created_at else None,
+            'updated_at': diagnosis.updated_at.isoformat() if diagnosis.updated_at else None,
+            'doctor': {
+                'id': doctor.id,
+                'username': doctor.username,
+                'first_name': doctor.first_name,
+                'last_name': doctor.last_name
+            } if doctor else None,
+            'disease': {
+                'id': disease.id,
+                'name': disease.name,
+                'description': disease.description
+            } if disease else None,
+            'patient': {
+                'id': patient.id,
+                'first_name': patient.first_name,
+                'last_name': patient.last_name
+            } if patient else None
+        }
+        
+        return jsonify({'status': 'success', 'data': diagnosis_data}), 200
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@diagnoses_bp.route('/diagnoses', methods=['POST'])
+@jwt_required()
+def create_diagnosis():
+    """
+    Crear un nuevo diagnóstico para el motor de inferencia.
+    
+    El motor de inferencia procesará los síntomas, signos y resultados de laboratorio
+    para determinar automáticamente:
+    - disease_code: Código de la enfermedad diagnosticada
+    - confidence_score: Nivel de confianza del diagnóstico
+    - alternative_diseases: Diagnósticos diferenciales
+    - treatment: Tratamiento recomendado
+    - inference_details: Detalles del proceso de inferencia
+    
+    Por ahora, como el motor de inferencia no está implementado, se requieren
+    valores temporales para estos campos.
+    """
+    try:
+        current_user_id = int(get_jwt_identity())
+        
+        if not is_doctor(current_user_id):
+            return jsonify({'status': 'error', 'message': 'Solo doctores pueden crear diagnósticos'}), 403
+        
+        data = request.get_json()
+        
+        # Validar campos requeridos (solo los que el doctor ingresa)
+        required_fields = ['patient_id', 'symptoms_presented', 'signs_observed']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'status': 'error', 'message': f'Campo requerido: {field}'}), 400
+        
+        # Verificar acceso al paciente
+        if not can_access_patient(current_user_id, data['patient_id']):
+            return jsonify({'status': 'error', 'message': 'No autorizado para este paciente'}), 403
+        
+        # TODO: Integrar motor de inferencia Kanren aquí
+        # Por ahora, usar valores temporales para demostración
+        # El motor de inferencia procesará:
+        # - symptoms_presented
+        # - signs_observed
+        # - lab_results (opcional)
+        # Y determinará automáticamente:
+        # - disease_code
+        # - confidence_score
+        # - alternative_diseases
+        # - treatment
+        # - treatment_start_date, treatment_end_date
+        # - follow_up_date
+        # - inference_details
+        
+        # Valores temporales (serán reemplazados por el motor de inferencia)
+        inferred_disease_code = data.get('disease_code', 'RESP01')  # Temporal: requerirá inferencia
+        inferred_treatment = data.get('treatment', 'Tratamiento pendiente de inferencia')  # Temporal
+        inferred_status = 'active'  # Siempre activo al crear
+        
+        # Crear el diagnóstico con los datos del doctor
+        diagnosis = Diagnosis(
+            patient_id=data['patient_id'],
+            doctor_id=current_user_id,
+            disease_code=inferred_disease_code,  # Será inferido por Kanren
+            diagnosis_date=datetime.utcnow(),  # Fecha actual automática
+            symptoms_presented=data['symptoms_presented'],
+            signs_observed=data['signs_observed'],
+            lab_results=data.get('lab_results'),
+            confidence_score=data.get('confidence_score'),  # Será calculado por Kanren
+            inference_details=data.get('inference_details'),  # Será generado por Kanren
+            alternative_diseases=data.get('alternative_diseases'),  # Será generado por Kanren
+            treatment=inferred_treatment,  # Será inferido por Kanren
+            treatment_start_date=datetime.utcnow(),  # Fecha actual automática
+            treatment_end_date=None,  # Se establecerá después
+            notes=data.get('notes'),
+            status=inferred_status,
+            follow_up_date=None  # Será sugerido por Kanren
+        )
+        
+        db.session.add(diagnosis)
+        db.session.commit()
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Diagnóstico creado correctamente',
+            'data': {'id': diagnosis.id}
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@diagnoses_bp.route('/diagnoses/<int:diagnosis_id>', methods=['PUT'])
+@jwt_required()
+def update_diagnosis(diagnosis_id):
+    """Actualizar un diagnóstico existente"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        
+        diagnosis = db.session.get(Diagnosis, diagnosis_id)
+        if not diagnosis:
+            return jsonify({'status': 'error', 'message': 'Diagnóstico no encontrado'}), 404
+        
+        # Verificar acceso
+        if not can_access_patient(current_user_id, diagnosis.patient_id):
+            return jsonify({'status': 'error', 'message': 'No autorizado'}), 403
+        
+        data = request.get_json()
+        
+        # Actualizar campos permitidos
+        if 'disease_code' in data:
+            diagnosis.disease_code = data['disease_code']
+        if 'diagnosis_date' in data:
+            diagnosis.diagnosis_date = datetime.fromisoformat(data['diagnosis_date'])
+        if 'symptoms_presented' in data:
+            diagnosis.symptoms_presented = data['symptoms_presented']
+        if 'signs_observed' in data:
+            diagnosis.signs_observed = data['signs_observed']
+        if 'lab_results' in data:
+            diagnosis.lab_results = data['lab_results']
+        if 'confidence_score' in data:
+            diagnosis.confidence_score = data['confidence_score']
+        if 'inference_details' in data:
+            diagnosis.inference_details = data['inference_details']
+        if 'alternative_diseases' in data:
+            diagnosis.alternative_diseases = data['alternative_diseases']
+        if 'treatment' in data:
+            diagnosis.treatment = data['treatment']
+        if 'treatment_start_date' in data:
+            diagnosis.treatment_start_date = datetime.fromisoformat(data['treatment_start_date']) if data['treatment_start_date'] else None
+        if 'treatment_end_date' in data:
+            diagnosis.treatment_end_date = datetime.fromisoformat(data['treatment_end_date']) if data['treatment_end_date'] else None
+        if 'notes' in data:
+            diagnosis.notes = data['notes']
+        if 'status' in data:
+            diagnosis.status = data['status']
+        if 'follow_up_date' in data:
+            diagnosis.follow_up_date = datetime.fromisoformat(data['follow_up_date']) if data['follow_up_date'] else None
+        
+        diagnosis.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify({'status': 'success', 'message': 'Diagnóstico actualizado correctamente'}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@diagnoses_bp.route('/diagnoses/<int:diagnosis_id>', methods=['DELETE'])
+@jwt_required()
+def delete_diagnosis(diagnosis_id):
+    """Eliminar un diagnóstico (solo admin)"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        user = db.session.get(User, current_user_id)
+        
+        if not user or user.role != 'admin':
+            return jsonify({'status': 'error', 'message': 'Solo administradores pueden eliminar diagnósticos'}), 403
+        
+        diagnosis = db.session.get(Diagnosis, diagnosis_id)
+        if not diagnosis:
+            return jsonify({'status': 'error', 'message': 'Diagnóstico no encontrado'}), 404
+        
+        db.session.delete(diagnosis)
+        db.session.commit()
+        
+        return jsonify({'status': 'success', 'message': 'Diagnóstico eliminado correctamente'}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': str(e)}), 500

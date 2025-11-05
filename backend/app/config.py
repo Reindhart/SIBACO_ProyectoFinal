@@ -1,4 +1,5 @@
 import os
+import logging
 from datetime import timedelta
 from dotenv import load_dotenv
 
@@ -14,29 +15,68 @@ cors_whitelist = os.getenv("CORS_WHITELIST", "").split(",") if os.getenv("CORS_W
 
 # Configuración de base de datos según el ambiente
 def get_database_uri():
-    """Obtiene la URI de la base de datos según el ambiente"""
+    """
+    Genera la URI de base de datos según el tipo configurado.
+    Soporta: PostgreSQL, SQLite, MySQL/MariaDB, Oracle, SQL Server
+    """
     if is_production:
+        db_type = os.getenv("DB_TYPE_PROD", "sqlite").lower()
         db_name = os.getenv("DB_NAME_PROD")
         db_user = os.getenv("DB_USER_PROD")
         db_password = os.getenv("DB_PASSWORD_PROD")
         db_host = os.getenv("DB_HOST_PROD", "localhost")
-        db_port = os.getenv("DB_PORT_PROD", "5432")
+        db_port = os.getenv("DB_PORT_PROD")
     else:
+        db_type = os.getenv("DB_TYPE_DEV", "sqlite").lower()
         db_name = os.getenv("DB_NAME_DEV")
         db_user = os.getenv("DB_USER_DEV")
         db_password = os.getenv("DB_PASSWORD_DEV")
         db_host = os.getenv("DB_HOST_DEV", "localhost")
-        db_port = os.getenv("DB_PORT_DEV", "5432")
+        db_port = os.getenv("DB_PORT_DEV")
     
-    return f"postgresql+psycopg://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+    # SQLite - No requiere usuario, contraseña, host o puerto
+    if db_type == "sqlite":
+        db_path = db_name if db_name else "medical_diagnostic.db"
+        return f"sqlite:///{db_path}"
+    
+    # PostgreSQL
+    elif db_type == "postgresql" or db_type == "postgres":
+        db_port = db_port or "5432"
+        return f"postgresql+psycopg://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+    
+    # MySQL / MariaDB
+    elif db_type == "mysql" or db_type == "mariadb":
+        db_port = db_port or "3306"
+        return f"mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+    
+    # Oracle
+    elif db_type == "oracle":
+        db_port = db_port or "1521"
+        # Oracle puede usar diferentes formatos, este es el más común
+        return f"oracle+cx_oracle://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+    
+    # SQL Server
+    elif db_type == "sqlserver" or db_type == "mssql":
+        db_port = db_port or "1433"
+        # SQL Server con pyodbc
+        return f"mssql+pyodbc://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}?driver=ODBC+Driver+17+for+SQL+Server"
+    
+    # Por defecto, usar SQLite
+    else:
+        print(f"⚠️  Tipo de base de datos '{db_type}' no reconocido. Usando SQLite por defecto.")
+        return f"sqlite:///{db_name if db_name else 'medical_diagnostic.db'}"
 
 
 class BaseConfig:
-    """Configuración base para todas las configuraciones"""
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "jwt-secret-key-change-in-production")
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
+    
+    # Configuración de ubicación del token JWT
+    JWT_TOKEN_LOCATION = ['headers']
+    JWT_HEADER_NAME = 'Authorization'
+    JWT_HEADER_TYPE = 'Bearer'
     
     # CORS
     CORS_ORIGINS = cors_whitelist
@@ -47,19 +87,24 @@ class BaseConfig:
     
     # Rate Limiting
     RATE_LIMIT_WHITELIST = os.getenv("RATE_LIMIT_WHITELIST", "").split(",") if os.getenv("RATE_LIMIT_WHITELIST") else []
+    
+    # Configuración de Logging
+    LOG_LEVEL = logging.INFO
+    LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 
 
 class DevConfig(BaseConfig):
-    """Configuración de desarrollo"""
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = get_database_uri()
     
     # En desarrollo, mostrar más información
     SQLALCHEMY_ECHO = True
+    
+    # Logging detallado en desarrollo (incluye tracebacks completos)
+    LOG_LEVEL = logging.DEBUG
 
 
 class ProdConfig(BaseConfig):
-    """Configuración de producción"""
     DEBUG = False
     SQLALCHEMY_DATABASE_URI = get_database_uri()
     
@@ -71,10 +116,13 @@ class ProdConfig(BaseConfig):
     SESSION_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
+    
+    # Logging menos verboso en producción (solo INFO y superiores)
+    LOG_LEVEL = logging.WARNING
+    SQLALCHEMY_ECHO = False
 
 
 class TestConfig(BaseConfig):
-    """Configuración de testing"""
     TESTING = True
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=5)
@@ -90,6 +138,5 @@ config = {
 }
 
 def get_config():
-    """Retorna la configuración según el ambiente"""
     env = os.getenv("NODE_ENV", "development")
     return config.get(env, config["default"])

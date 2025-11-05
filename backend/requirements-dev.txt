@@ -9,3 +9,8 @@ pytest==8.4.2
 black==25.9.0
 ruff==0.14.2
 pre-commit==4.3.0
+
+# --- Motor de Inferencia ---
+kanren==0.3.0
+minikanren==1.0.5
+experta==1.9.4
