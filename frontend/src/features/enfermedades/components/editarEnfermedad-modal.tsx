@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { Activity, X, ChevronDown } from 'lucide-react'
 import { apiClient } from '@/lib/api'
+import type { Disease } from '@/features/enfermedades/components/enfermedades-table'
 
 type Symptom = {
   id: number
@@ -28,7 +29,8 @@ type DiseaseFormData = {
   prevention_measures?: string
 }
 
-type CreateDiseaseModalProps = {
+type EditDiseaseModalProps = {
+  disease: Disease
   onClose: () => void
   onSave: () => void
 }
@@ -52,7 +54,7 @@ const DISEASE_CATEGORIES = [
   { label: 'Otorrinolaringológico', value: 'ORL' }
 ]
 
-export default function CreateDiseaseModal({ onClose, onSave }: CreateDiseaseModalProps) {
+export default function EditDiseaseModal({ disease, onClose, onSave }: EditDiseaseModalProps) {
   const [allSymptoms, setAllSymptoms] = useState<Symptom[]>([])
   const [allSigns, setAllSigns] = useState<Sign[]>([])
   const [selectedSymptoms, setSelectedSymptoms] = useState<Symptom[]>([])
@@ -70,12 +72,12 @@ export default function CreateDiseaseModal({ onClose, onSave }: CreateDiseaseMod
     formState: { errors, isSubmitting }
   } = useForm<DiseaseFormData>({
     defaultValues: {
-      name: '',
-      description: '',
-      category: '',
-      severity: 'moderada',
-      treatment_recommendations: '',
-      prevention_measures: ''
+      name: disease.name,
+      description: disease.description || '',
+      category: disease.category,
+      severity: disease.severity || 'moderada',
+      treatment_recommendations: disease.treatment_recommendations || '',
+      prevention_measures: disease.prevention_measures || ''
     }
   })
 
@@ -89,12 +91,20 @@ export default function CreateDiseaseModal({ onClose, onSave }: CreateDiseaseMod
         ])
         setAllSymptoms(symptomsRes.data || [])
         setAllSigns(signsRes.data || [])
+
+        // Establecer síntomas y signos seleccionados si existen
+        if (disease.symptoms && Array.isArray(disease.symptoms)) {
+          setSelectedSymptoms(disease.symptoms as Symptom[])
+        }
+        if (disease.signs && Array.isArray(disease.signs)) {
+          setSelectedSigns(disease.signs as Sign[])
+        }
       } catch (error) {
         console.error('Error loading symptoms/signs:', error)
       }
     }
     fetchData()
-  }, [])
+  }, [disease])
 
   // Cerrar dropdowns al hacer click fuera
   useEffect(() => {
@@ -117,7 +127,7 @@ export default function CreateDiseaseModal({ onClose, onSave }: CreateDiseaseMod
         symptom_ids: selectedSymptoms.map(s => s.id),
         sign_ids: selectedSigns.map(s => s.id)
       }
-      await apiClient.post('/api/diseases', payload)
+      await apiClient.put(`/api/diseases/${disease.code}`, payload)
       onSave()
     } catch (error: any) {
       console.error('Error saving disease:', error)
@@ -165,7 +175,10 @@ export default function CreateDiseaseModal({ onClose, onSave }: CreateDiseaseMod
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Activity className="h-6 w-6 text-primary" />
-            <h3 className="text-lg font-bold">Nueva Enfermedad</h3>
+            <div>
+              <h3 className="text-lg font-bold">Editar Enfermedad</h3>
+              <p className="text-sm text-base-content/70">Código: {disease.code}</p>
+            </div>
           </div>
           <button className="btn btn-ghost btn-circle btn-sm" onClick={onClose}>
             <X className="h-5 w-5" />
@@ -238,9 +251,43 @@ export default function CreateDiseaseModal({ onClose, onSave }: CreateDiseaseMod
             />
           </div>
 
+          <div className="divider">Información Clínica</div>
+
+          {/* Tratamientos */}
+          <div className="form-control">
+            <label htmlFor="treatment_recommendations" className="label-text mb-2 block">
+              Tratamientos Recomendados
+            </label>
+            <span className="text-xs text-base-content/70 mb-2 block">
+              Ingrese cada tratamiento en una línea separada (se mostrará como lista)
+            </span>
+            <textarea
+              id="treatment_recommendations"
+              className="textarea textarea-bordered w-full h-32"
+              placeholder={'Ej:\nReposo absoluto por 7 días\nParacetamol 500mg cada 8 horas'}
+              {...register('treatment_recommendations')}
+            />
+          </div>
+
+          {/* Medidas de prevención */}
+          <div className="form-control">
+            <label htmlFor="prevention_measures" className="label-text mb-2 block">
+              Medidas de Prevención
+            </label>
+            <span className="text-xs text-base-content/70 mb-2 block">
+              Ingrese cada medida en una línea separada (se mostrará como lista)
+            </span>
+            <textarea
+              id="prevention_measures"
+              className="textarea textarea-bordered w-full h-32"
+              placeholder={'Ej:\nLavado frecuente de manos\nVacunación anual'}
+              {...register('prevention_measures')}
+            />
+          </div>
+
           <div className="divider">Síntomas y Signos</div>
 
-          {/* Selector de Síntomas y Signos */}
+          {/* Selector de Síntomas y Signos con Combobox */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Selector de Síntomas con Combobox */}
             <div className="form-control" ref={symptomDropdownRef}>
@@ -267,11 +314,7 @@ export default function CreateDiseaseModal({ onClose, onSave }: CreateDiseaseMod
                 {/* Dropdown list */}
                 {isSymptomDropdownOpen && (
                   <div className="absolute z-10 w-full mt-1 border border-base-300 rounded-lg bg-base-100 shadow-lg max-h-60 overflow-y-auto">
-                    {allSymptoms.length === 0 ? (
-                      <p className="text-sm text-base-content/50 text-center py-4">
-                        Cargando síntomas...
-                      </p>
-                    ) : filteredSymptoms.length === 0 && symptomSearch ? (
+                    {(symptomSearch ? filteredSymptoms : allSymptoms).length === 0 ? (
                       <p className="text-sm text-base-content/50 text-center py-4">
                         No se encontraron síntomas
                       </p>
@@ -288,20 +331,20 @@ export default function CreateDiseaseModal({ onClose, onSave }: CreateDiseaseMod
                                   removeSymptom(symptom.id)
                                 } else {
                                   addSymptom(symptom)
-                                  setSymptomSearch('')
                                 }
+                                setSymptomSearch('')
                               }}
-                              className={`w-full text-left px-3 py-2 rounded hover:bg-base-200 transition-colors flex items-start justify-between gap-2 ${isSelected ? 'bg-base-200' : ''}`}
+                              className={`w-full text-left px-3 py-2 rounded hover:bg-base-200 transition-colors flex items-start gap-2 ${isSelected ? 'bg-base-200' : ''}`}
                             >
-                              <div className="flex-1">
-                                <div className="font-medium text-sm">{symptom.name}</div>
-                                <div className="text-xs text-base-content/60">{symptom.code}</div>
-                              </div>
                               {isSelected && (
                                 <svg className="h-5 w-5 text-success shrink-0 mt-0.5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
                                   <path d="M5 13l4 4L19 7"></path>
                                 </svg>
                               )}
+                              <div className="flex-1">
+                                <div className="font-medium text-sm">{symptom.name}</div>
+                                <div className="text-xs text-base-content/60">{symptom.code}</div>
+                              </div>
                             </button>
                           )
                         })}
@@ -355,11 +398,7 @@ export default function CreateDiseaseModal({ onClose, onSave }: CreateDiseaseMod
                 {/* Dropdown list */}
                 {isSignDropdownOpen && (
                   <div className="absolute z-10 w-full mt-1 border border-base-300 rounded-lg bg-base-100 shadow-lg max-h-60 overflow-y-auto">
-                    {allSigns.length === 0 ? (
-                      <p className="text-sm text-base-content/50 text-center py-4">
-                        Cargando signos...
-                      </p>
-                    ) : filteredSigns.length === 0 && signSearch ? (
+                    {(signSearch ? filteredSigns : allSigns).length === 0 ? (
                       <p className="text-sm text-base-content/50 text-center py-4">
                         No se encontraron signos
                       </p>
@@ -376,20 +415,20 @@ export default function CreateDiseaseModal({ onClose, onSave }: CreateDiseaseMod
                                   removeSign(sign.id)
                                 } else {
                                   addSign(sign)
-                                  setSignSearch('')
                                 }
+                                setSignSearch('')
                               }}
-                              className={`w-full text-left px-3 py-2 rounded hover:bg-base-200 transition-colors flex items-start justify-between gap-2 ${isSelected ? 'bg-base-200' : ''}`}
+                              className={`w-full text-left px-3 py-2 rounded hover:bg-base-200 transition-colors flex items-start gap-2 ${isSelected ? 'bg-base-200' : ''}`}
                             >
-                              <div className="flex-1">
-                                <div className="font-medium text-sm">{sign.name}</div>
-                                <div className="text-xs text-base-content/60">{sign.code}</div>
-                              </div>
                               {isSelected && (
                                 <svg className="h-5 w-5 text-success shrink-0 mt-0.5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
                                   <path d="M5 13l4 4L19 7"></path>
                                 </svg>
                               )}
+                              <div className="flex-1">
+                                <div className="font-medium text-sm">{sign.name}</div>
+                                <div className="text-xs text-base-content/60">{sign.code}</div>
+                              </div>
                             </button>
                           )
                         })}
@@ -419,40 +458,6 @@ export default function CreateDiseaseModal({ onClose, onSave }: CreateDiseaseMod
             </div>
           </div>
 
-          <div className="divider">Información Clínica</div>
-
-          {/* Tratamientos */}
-          <div className="form-control">
-            <label htmlFor="treatment_recommendations" className="label-text mb-2 block">
-              Tratamientos Recomendados
-            </label>
-            <span className="text-xs text-base-content/70 mb-2 block">
-              Ingrese cada tratamiento en una línea separada (se mostrará como lista)
-            </span>
-            <textarea
-              id="treatment_recommendations"
-              className="textarea textarea-bordered w-full h-32"
-              placeholder={'Ej:\nReposo absoluto por 7 días\nParacetamol 500mg cada 8 horas\nAbundantes líquidos\nEvitar cambios bruscos de temperatura'}
-              {...register('treatment_recommendations')}
-            />
-          </div>
-
-          {/* Medidas de prevención */}
-          <div className="form-control">
-            <label htmlFor="prevention_measures" className="label-text mb-2 block">
-              Medidas de Prevención
-            </label>
-            <span className="text-xs text-base-content/70 mb-2 block">
-              Ingrese cada medida en una línea separada (se mostrará como lista)
-            </span>
-            <textarea
-              id="prevention_measures"
-              className="textarea textarea-bordered w-full h-32"
-              placeholder={'Ej:\nLavado frecuente de manos\nVacunación anual\nEvitar contacto con personas enfermas\nMantener ambientes ventilados'}
-              {...register('prevention_measures')}
-            />
-          </div>
-
           {/* Acciones */}
           <div className="modal-action">
             <button type="button" className="btn btn-ghost" onClick={onClose} disabled={isSubmitting}>
@@ -465,7 +470,7 @@ export default function CreateDiseaseModal({ onClose, onSave }: CreateDiseaseMod
                   Guardando...
                 </>
               ) : (
-                'Crear Enfermedad'
+                'Guardar Cambios'
               )}
             </button>
           </div>

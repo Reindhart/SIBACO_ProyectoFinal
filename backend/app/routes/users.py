@@ -107,7 +107,10 @@ def update_user(user_id):
         Authorization: Bearer <access_token>
     Body:
         first_name: str (opcional)
-        last_name: str (opcional)
+        second_name: str (opcional)
+        paternal_surname: str (opcional)
+        maternal_surname: str (opcional)
+        last_name: str (opcional, mantener por compatibilidad)
         phone: str (opcional)
         email: str (opcional)
         role: str (opcional)
@@ -136,6 +139,12 @@ def update_user(user_id):
         # Actualizar campos permitidos
         if 'first_name' in data:
             user.first_name = data['first_name']
+        if 'second_name' in data:
+            user.second_name = data['second_name']
+        if 'paternal_surname' in data:
+            user.paternal_surname = data['paternal_surname']
+        if 'maternal_surname' in data:
+            user.maternal_surname = data['maternal_surname']
         if 'last_name' in data:
             user.last_name = data['last_name']
         if 'phone' in data:

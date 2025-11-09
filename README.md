@@ -1,6 +1,6 @@
-# React + Flask Template
+# Proyecto Final: Sistemas Basados en Conocimiento
 
-Una plantilla completa para proyectos web usando React con TypeScript en el frontend y Flask en el backend con separación de ambientes.
+Este proyecto es acerca de un sistema de diagnóstico médico, el cuál usa un motor dei inferencia para detectar enfermedades y tratamientos a pacientes.
 
 ## 🚀 Tecnologías
 
@@ -21,6 +21,7 @@ Una plantilla completa para proyectos web usando React con TypeScript en el fron
 - **PostgreSQL** - Base de datos
 - **Flask-Migrate** - Migraciones de base de datos
 - **Python-dotenv** - Gestión de variables de entorno
+- **Kanren** - Programación lógica para motor de inferencia
 
 ## 📦 Instalación
 
@@ -233,17 +234,6 @@ NODE_ENV=test
 - Usa SQLite en memoria
 - Configuración optimizada para tests
 
-## 🎯 Próximos Pasos
-
-Para adaptar esta plantilla a tu proyecto:
-
-1. **Modelos de Base de Datos**: Crea tus modelos en `backend/app/models/`
-2. **Rutas Backend**: Agrega tus endpoints en `backend/app/routes/`
-3. **Componentes Frontend**: Crea tus componentes en `frontend/src/components/`
-4. **Rutas Frontend**: Agrega páginas en `frontend/src/routes/` (TanStack Router las detectará automáticamente)
-5. **Features**: Organiza tu lógica de negocio en `frontend/src/features/`
-6. **Servicios Backend**: Implementa tu lógica en `backend/app/services/`
-
 ## 📝 Comandos Útiles
 
 ### Backend
@@ -304,10 +294,6 @@ Para personalizar más, edita `tailwind.config.js`.
 - ✅ Cookies seguras en producción
 - ✅ Rate limiting listo para configurar
 - ✅ .env excluido de git
-
-## 🤝 Contribuir
-
-Esta es una plantilla base. Siéntete libre de adaptarla a tus necesidades.
 
 ## 📄 Licencia
 

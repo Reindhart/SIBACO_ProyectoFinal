@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Plus, Filter, X } from 'lucide-react'
+import { Plus, Filter, FunnelX, X } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
 import DiseasesTable from '@/features/enfermedades/components/enfermedades-table'
-import DiseaseModal from '@/features/enfermedades/components/crearEnfermedad-modal'
+import CreateDiseaseModal from '@/features/enfermedades/components/crearEnfermedad-modal'
+import EditDiseaseModal from '@/features/enfermedades/components/editarEnfermedad-modal'
 import type { Disease } from '@/features/enfermedades/components/enfermedades-table'
 import NotFoundPage from '@/features/errors/not-found'
 
@@ -23,6 +24,10 @@ export default function EnfermedadesPage() {
     categoria: '',
     severidad: ''
   })
+  
+  // Paginación
+  const [pageSize, setPageSize] = useState<number>(10)
+  const [currentPage, setCurrentPage] = useState<number>(1)
 
   // Cargar enfermedades
   const fetchDiseases = async () => {
@@ -44,6 +49,22 @@ export default function EnfermedadesPage() {
       fetchDiseases()
     }
   }, [user])
+  
+  // Debounce para filtros: esperar 1 segundo después de que el usuario deje de escribir
+  useEffect(() => {
+    if (Object.values(filters).every(v => v === '')) {
+      // Si todos los filtros están vacíos, no hacer nada
+      return
+    }
+    
+    const timeoutId = setTimeout(() => {
+      // Resetear a página 1 cuando cambien los filtros
+      setCurrentPage(1)
+    }, 1000) // 1 segundo de debounce
+
+    return () => clearTimeout(timeoutId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters])
 
   const handleCreateDisease = () => {
     setEditingDisease(null)
@@ -83,6 +104,11 @@ export default function EnfermedadesPage() {
     return matchNombre && matchCategoria && matchSeveridad
   })
 
+  // Paginación: calcular slice
+  const totalPages = Math.max(1, Math.ceil(filteredDiseases.length / pageSize))
+  if (currentPage > totalPages) setCurrentPage(1)
+  const paginatedDiseases = filteredDiseases.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
   const hasActiveFilters = Object.values(filters).some(v => v !== '')
 
   if (authLoading || loading) {
@@ -105,11 +131,19 @@ export default function EnfermedadesPage() {
         </div>
         <div className="flex gap-2">
           <button
-            className="btn btn-ghost btn-circle"
-            onClick={() => setShowFilters(!showFilters)}
+            className={`btn btn-ghost btn-circle ${showFilters ? 'btn-active' : ''}`}
+            onClick={() => {
+              if (showFilters) {
+                clearFilters()
+                setShowFilters(false)
+              } else {
+                setShowFilters(true)
+              }
+              setCurrentPage(1)
+            }}
             title={showFilters ? 'Ocultar filtros' : 'Mostrar filtros'}
           >
-            <Filter className="h-5 w-5" />
+            {showFilters ? <FunnelX className="h-5 w-5" /> : <Filter className="h-5 w-5" />}
           </button>
           <button
             className="btn btn-primary btn-circle"
@@ -188,20 +222,49 @@ export default function EnfermedadesPage() {
       )}
 
       {/* Tabla */}
-      <DiseasesTable diseases={filteredDiseases} onEdit={handleEditDisease} />
+      <DiseasesTable diseases={paginatedDiseases} onEdit={handleEditDisease} />
+
+      {/* Paginación */}
+      <div className="flex items-center justify-between mt-4">
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-base-content/70">Mostrar</label>
+          <select
+            className="select select-bordered select-sm"
+            value={pageSize}
+            onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+          >
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+          </select>
+          <span className="text-sm text-base-content/70">por página</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button className="btn btn-ghost btn-sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>Anterior</button>
+          <span className="text-sm">Página {currentPage} de {totalPages}</span>
+          <button className="btn btn-ghost btn-sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>Siguiente</button>
+        </div>
+      </div>
 
       {/* Contador */}
       <div className="mt-4 text-sm text-base-content/70 text-center">
-        Mostrando {filteredDiseases.length} de {diseases.length} enfermedades
+        {filteredDiseases.length === 0 ? (
+          'Mostrando 0 de 0 enfermedades'
+        ) : (
+          (() => {
+            const start = (currentPage - 1) * pageSize + 1
+            const end = Math.min(currentPage * pageSize, filteredDiseases.length)
+            return `Mostrando ${start}-${end} de ${filteredDiseases.length} enfermedades`
+          })()
+        )}
       </div>
 
-      {/* Modal */}
-      {showModal && (
-        <DiseaseModal
-          disease={editingDisease}
-          onClose={handleCloseModal}
-          onSave={handleSaveDisease}
-        />
+      {/* Modales */}
+      {showModal && !editingDisease && (
+        <CreateDiseaseModal onClose={handleCloseModal} onSave={handleSaveDisease} />
+      )}
+      {showModal && editingDisease && (
+        <EditDiseaseModal disease={editingDisease} onClose={handleCloseModal} onSave={handleSaveDisease} />
       )}
     </div>
   )

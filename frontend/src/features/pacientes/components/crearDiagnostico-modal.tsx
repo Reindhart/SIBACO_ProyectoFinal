@@ -1,5 +1,5 @@
 import { useForm } from 'react-hook-form'
-import { X, Stethoscope, AlertCircle } from 'lucide-react'
+import { X, Stethoscope } from 'lucide-react'
 import { apiClient } from '@/lib/api'
 import type { Patient } from './pacientes-table'
 
@@ -57,7 +57,7 @@ export default function DiagnosisModal({ patient, onClose, onSave }: DiagnosisMo
             <div>
               <h3 className="text-lg font-bold">Nuevo Diagnóstico</h3>
               <p className="text-sm text-base-content/70">
-                Paciente: {patient.first_name} {patient.last_name}
+                Paciente: {patient.full_name}
               </p>
             </div>
           </div>
@@ -67,15 +67,6 @@ export default function DiagnosisModal({ patient, onClose, onSave }: DiagnosisMo
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {/* Información para el motor de inferencia */}
-          <div className="alert alert-info">
-            <AlertCircle className="h-5 w-5" />
-            <div className="text-sm">
-              <p className="font-semibold mb-1">Motor de Inferencia con Kanren</p>
-              <p>Complete la información clínica. El motor de inferencia determinará automáticamente la enfermedad y el tratamiento más apropiado basándose en programación lógica.</p>
-            </div>
-          </div>
-
           <div className="divider">
             <span className="text-sm font-semibold">Datos Clínicos del Paciente</span>
           </div>
@@ -154,20 +145,6 @@ export default function DiagnosisModal({ patient, onClose, onSave }: DiagnosisMo
               placeholder="Ej: Paciente con antecedentes de diabetes tipo 2 controlada. Viajó recientemente a zona endémica. Tratamiento previo con..."
               {...register('notes')}
             />
-          </div>
-
-          <div className="alert alert-warning">
-            <AlertCircle className="h-5 w-5" />
-            <div className="text-sm">
-              <p className="font-semibold">Proceso Automático</p>
-              <p>Una vez guardada la información, el motor de inferencia procesará los datos para:</p>
-              <ul className="list-disc list-inside mt-1">
-                <li>Identificar posibles enfermedades y su nivel de confianza</li>
-                <li>Determinar diagnósticos alternativos</li>
-                <li>Sugerir el tratamiento más adecuado</li>
-                <li>Establecer fecha de seguimiento recomendada</li>
-              </ul>
-            </div>
           </div>
 
           {/* Acciones */}

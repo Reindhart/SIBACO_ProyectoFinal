@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { X, Calendar } from 'lucide-react'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import { apiClient } from '@/lib/api'
+import type { Patient } from './pacientes-table'
 
 type PatientFormData = {
   first_name: string
@@ -20,39 +21,63 @@ type PatientFormData = {
   chronic_conditions?: string
 }
 
-type CreatePatientModalProps = {
+type EditPatientModalProps = {
+  patient: Patient
   onClose: () => void
   onSave: () => void
 }
 
-export default function CreatePatientModal({ onClose, onSave }: CreatePatientModalProps) {
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+export default function EditPatientModal({ patient, onClose, onSave }: EditPatientModalProps) {
+  const [selectedDate, setSelectedDate] = useState<Date | null>(
+    patient?.date_of_birth ? new Date(patient.date_of_birth) : null
+  )
 
   const {
     register,
     handleSubmit,
     control,
-    formState: { errors, isSubmitting }
+    formState: { errors, isSubmitting },
+    reset
   } = useForm<PatientFormData>({
     defaultValues: {
-      first_name: '',
-      second_name: '',
-      paternal_surname: '',
-      maternal_surname: '',
-      date_of_birth: '',
-      gender: '',
-      blood_type: '',
-      email: '',
-      phone: '',
-      address: '',
-      allergies: '',
-      chronic_conditions: ''
+      first_name: patient.first_name,
+      second_name: patient.second_name || '',
+      paternal_surname: patient.paternal_surname || '',
+      maternal_surname: patient.maternal_surname || '',
+      date_of_birth: patient.date_of_birth,
+      gender: patient.gender,
+      blood_type: patient.blood_type || '',
+      email: patient.email || '',
+      phone: patient.phone || '',
+      address: patient.address || '',
+      allergies: patient.allergies || '',
+      chronic_conditions: patient.chronic_conditions || ''
     }
   })
 
+  useEffect(() => {
+    reset({
+      first_name: patient.first_name,
+      second_name: patient.second_name || '',
+      paternal_surname: patient.paternal_surname || '',
+      maternal_surname: patient.maternal_surname || '',
+      date_of_birth: patient.date_of_birth,
+      gender: patient.gender,
+      blood_type: patient.blood_type || '',
+      email: patient.email || '',
+      phone: patient.phone || '',
+      address: patient.address || '',
+      allergies: patient.allergies || '',
+      chronic_conditions: patient.chronic_conditions || ''
+    })
+    if (patient.date_of_birth) {
+      setSelectedDate(new Date(patient.date_of_birth))
+    }
+  }, [patient, reset])
+
   const onSubmit = async (data: PatientFormData) => {
     try {
-      await apiClient.post('/api/patients', data)
+      await apiClient.put(`/api/patients/${patient.id}`, data)
       onSave()
     } catch (error: any) {
       console.error('Error saving patient:', error)
@@ -64,7 +89,10 @@ export default function CreatePatientModal({ onClose, onSave }: CreatePatientMod
     <div className="modal modal-open">
       <div className="modal-box max-w-2xl">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold">Nuevo Paciente</h3>
+          <div>
+            <h3 className="text-lg font-bold">Editar Paciente</h3>
+            <p className="text-sm text-base-content/70">ID: {patient.id}</p>
+          </div>
           <button className="btn btn-ghost btn-circle btn-sm" onClick={onClose}>
             <X className="h-5 w-5" />
           </button>
@@ -278,7 +306,7 @@ export default function CreatePatientModal({ onClose, onSave }: CreatePatientMod
                   Guardando...
                 </>
               ) : (
-                'Crear Paciente'
+                'Guardar Cambios'
               )}
             </button>
           </div>

@@ -20,8 +20,10 @@ class User(db.Model):
     role = db.Column(db.String(20), nullable=False, default='doctor')
     
     # Información personal
-    first_name = db.Column(db.String(100))
-    last_name = db.Column(db.String(100))
+    first_name = db.Column(db.String(100), nullable=False)
+    second_name = db.Column(db.String(100))  # Segundo nombre (opcional)
+    paternal_surname = db.Column(db.String(100), nullable=False)  # Apellido paterno
+    maternal_surname = db.Column(db.String(100))  # Apellido materno (opcional)
     phone = db.Column(db.String(20))
     
     # Estado del usuario
@@ -48,8 +50,14 @@ class User(db.Model):
     @property
     def full_name(self):
         """Retorna el nombre completo del usuario"""
-        if self.first_name and self.last_name:
-            return f"{self.first_name} {self.last_name}"
+        if self.first_name and self.paternal_surname:
+            parts = [self.first_name]
+            if self.second_name:
+                parts.append(self.second_name)
+            parts.append(self.paternal_surname)
+            if self.maternal_surname:
+                parts.append(self.maternal_surname)
+            return ' '.join(parts)
         return self.username
     
     def to_dict(self, include_email=True):
@@ -59,7 +67,9 @@ class User(db.Model):
             'username': self.username,
             'role': self.role,
             'first_name': self.first_name,
-            'last_name': self.last_name,
+            'second_name': self.second_name,
+            'paternal_surname': self.paternal_surname,
+            'maternal_surname': self.maternal_surname,
             'full_name': self.full_name,
             'phone': self.phone,
             'is_active': self.is_active,

@@ -111,17 +111,17 @@ def create_disease():
         
         db.session.add(disease)
         
-        # Asociar síntomas si se proporcionan
-        if 'symptom_codes' in data and data['symptom_codes']:
-            for symptom_code in data['symptom_codes']:
-                symptom = db.session.get(Symptom, symptom_code)
+        # Asociar síntomas si se proporcionan (por ID)
+        if 'symptom_ids' in data and data['symptom_ids']:
+            for symptom_id in data['symptom_ids']:
+                symptom = db.session.get(Symptom, symptom_id)
                 if symptom:
                     disease.symptoms.append(symptom)
         
-        # Asociar signos si se proporcionan
-        if 'sign_codes' in data and data['sign_codes']:
-            for sign_code in data['sign_codes']:
-                sign = db.session.get(Sign, sign_code)
+        # Asociar signos si se proporcionan (por ID)
+        if 'sign_ids' in data and data['sign_ids']:
+            for sign_id in data['sign_ids']:
+                sign = db.session.get(Sign, sign_id)
                 if sign:
                     disease.signs.append(sign)
         
@@ -168,23 +168,23 @@ def update_disease(code):
         if 'prevention_measures' in data:
             disease.prevention_measures = data['prevention_measures']
         
-        # Actualizar síntomas si se proporcionan
-        if 'symptom_codes' in data:
+        # Actualizar síntomas si se proporcionan (por ID)
+        if 'symptom_ids' in data:
             # Limpiar síntomas existentes
             disease.symptoms = []
             # Agregar nuevos síntomas
-            for symptom_code in data['symptom_codes']:
-                symptom = db.session.get(Symptom, symptom_code)
+            for symptom_id in data['symptom_ids']:
+                symptom = db.session.get(Symptom, symptom_id)
                 if symptom:
                     disease.symptoms.append(symptom)
         
-        # Actualizar signos si se proporcionan
-        if 'sign_codes' in data:
+        # Actualizar signos si se proporcionan (por ID)
+        if 'sign_ids' in data:
             # Limpiar signos existentes
             disease.signs = []
             # Agregar nuevos signos
-            for sign_code in data['sign_codes']:
-                sign = db.session.get(Sign, sign_code)
+            for sign_id in data['sign_ids']:
+                sign = db.session.get(Sign, sign_id)
                 if sign:
                     disease.signs.append(sign)
         

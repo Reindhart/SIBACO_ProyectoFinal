@@ -14,10 +14,18 @@ class Patient(db.Model):
     
     # Información personal
     first_name = db.Column(db.String(100), nullable=False)
-    last_name = db.Column(db.String(100), nullable=False)
+    second_name = db.Column(db.String(100))  # Segundo nombre (opcional)
+    paternal_surname = db.Column(db.String(100), nullable=False)  # Apellido paterno
+    maternal_surname = db.Column(db.String(100))  # Apellido materno (opcional)
     date_of_birth = db.Column(db.Date, nullable=False)
     gender = db.Column(db.String(20))  # 'male', 'female', 'other'
-    blood_type = db.Column(db.String(10))  # 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'
+    
+    # Tipo de sangre separado en dos componentes
+    # ABO: 0=O, 1=A, 2=B, 3=AB
+    blood_type_abo = db.Column(db.Integer)  # 0-3
+    # Rh: 0=negativo, 1=positivo
+    blood_type_rh = db.Column(db.Integer)  # 0 o 1
+
     
     # Información de contacto
     email = db.Column(db.String(120))
@@ -44,7 +52,16 @@ class Patient(db.Model):
     @property
     def full_name(self):
         """Retorna el nombre completo del paciente"""
-        return f"{self.first_name} {self.last_name}"
+        # Usar los nuevos campos si están disponibles
+        if self.paternal_surname:
+            parts = [self.first_name]
+            if self.second_name:
+                parts.append(self.second_name)
+            parts.append(self.paternal_surname)
+            if self.maternal_surname:
+                parts.append(self.maternal_surname)
+            return ' '.join(parts)
+        return f"{self.first_name}"
     
     @property
     def age(self):
@@ -59,12 +76,15 @@ class Patient(db.Model):
         return {
             'id': self.id,
             'first_name': self.first_name,
-            'last_name': self.last_name,
+            'second_name': self.second_name,
+            'paternal_surname': self.paternal_surname,
+            'maternal_surname': self.maternal_surname,
             'full_name': self.full_name,
             'date_of_birth': self.date_of_birth.isoformat() if self.date_of_birth else None,
             'age': self.age,
             'gender': self.gender,
-            'blood_type': self.blood_type,
+            'blood_type_abo': self.blood_type_abo,
+            'blood_type_rh': self.blood_type_rh,
             'email': self.email,
             'phone': self.phone,
             'address': self.address,

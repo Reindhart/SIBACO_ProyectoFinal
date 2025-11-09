@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
-import { UserPlus, Edit, Filter, X } from 'lucide-react'
-import UserModal from './UserModal'
+import { UserPlus, Edit, Filter, FunnelX, X } from 'lucide-react'
+import CrearUsuarioModal from './crearUsuario-modal'
+import EditarUsuarioModal from './editarUsuario-modal'
 import { apiClient } from '@/lib/api'
 
 type UserItem = {
@@ -9,7 +10,9 @@ type UserItem = {
   email: string
   role: 'admin' | 'doctor'
   first_name?: string
-  last_name?: string
+  second_name?: string
+  paternal_surname?: string
+  maternal_surname?: string
   phone?: string
   is_active: boolean
 }
@@ -29,14 +32,20 @@ export default function UsersCrud() {
     username: '',
     role: '',
     nombre: '',
-    apellido: ''
+    apellidoPaterno: '',
+    apellidoMaterno: ''
   })
+  
+  // Paginación
+  const [pageSize, setPageSize] = useState<number>(10)
+  const [currentPage, setCurrentPage] = useState<number>(1)
 
   // Cargar usuarios desde la base de datos
   const fetchUsers = async () => {
     try {
       setLoading(true)
       setError(null)
+      // IMPORTANTE: Siempre cargar TODOS los usuarios para que los filtros funcionen correctamente
       const response = await apiClient.get<{ status: string; data: UserItem[] }>('/api/users')
       // La respuesta del backend tiene formato { status: 'success', data: [...] }
       setUsers(response.data || [])
@@ -51,6 +60,12 @@ export default function UsersCrud() {
   useEffect(() => {
     fetchUsers()
   }, [])
+  
+  // Resetear a página 1 cuando cambien los filtros (sin debounce, sin recargar)
+  useEffect(() => {
+    setCurrentPage(1)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters])
 
   // Función para normalizar texto (sin acentos, minúsculas)
   const normalizeText = (text: string | undefined): string => {
@@ -67,11 +82,17 @@ export default function UsersCrud() {
       const matchUsername = normalizeText(user.username).includes(normalizeText(filters.username))
       const matchRole = !filters.role || user.role === filters.role
       const matchNombre = normalizeText(user.first_name).includes(normalizeText(filters.nombre))
-      const matchApellido = normalizeText(user.last_name).includes(normalizeText(filters.apellido))
+      const matchApellidoPaterno = normalizeText(user.paternal_surname).includes(normalizeText(filters.apellidoPaterno))
+      const matchApellidoMaterno = normalizeText(user.maternal_surname).includes(normalizeText(filters.apellidoMaterno))
       
-      return matchUsername && matchRole && matchNombre && matchApellido
+      return matchUsername && matchRole && matchNombre && matchApellidoPaterno && matchApellidoMaterno
     })
   }, [users, filters])
+
+  // Paginación: calcular slice
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize))
+  if (currentPage > totalPages) setCurrentPage(1)
+  const paginatedUsers = filteredUsers.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   const handleCreate = () => {
     setEditingUser(null)
@@ -98,7 +119,8 @@ export default function UsersCrud() {
       username: '',
       role: '',
       nombre: '',
-      apellido: ''
+      apellidoPaterno: '',
+      apellidoMaterno: ''
     })
   }
 
@@ -122,11 +144,22 @@ export default function UsersCrud() {
         </div>
         <div className="flex gap-2">
           <button
-            className="btn btn-ghost btn-circle"
-            onClick={() => setShowFilters(!showFilters)}
+            className={`btn btn-ghost btn-circle ${showFilters ? 'btn-active' : ''}`}
+            onClick={() => {
+              if (showFilters) {
+                // Solo limpiar filtros si hay alguno activo
+                if (hasActiveFilters) {
+                  clearFilters()
+                }
+                setShowFilters(false)
+              } else {
+                setShowFilters(true)
+              }
+              setCurrentPage(1)
+            }}
             title={showFilters ? "Ocultar filtros" : "Mostrar filtros"}
           >
-            <Filter className="h-5 w-5" />
+            {showFilters ? <FunnelX className="h-5 w-5" /> : <Filter className="h-5 w-5" />}
           </button>
           <button
             className="btn btn-primary btn-circle"
@@ -161,7 +194,7 @@ export default function UsersCrud() {
                 </button>
               )}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               <div className="form-control">
                 <label className="label">
                   <span className="label-text">Usuario</span>
@@ -202,14 +235,26 @@ export default function UsersCrud() {
               </div>
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text">Apellido</span>
+                  <span className="label-text">Apellido Paterno</span>
                 </label>
                 <input
                   type="text"
-                  placeholder="Buscar por apellido..."
+                  placeholder="Buscar..."
                   className="input input-bordered input-sm"
-                  value={filters.apellido}
-                  onChange={(e) => setFilters({ ...filters, apellido: e.target.value })}
+                  value={filters.apellidoPaterno}
+                  onChange={(e) => setFilters({ ...filters, apellidoPaterno: e.target.value })}
+                />
+              </div>
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Apellido Materno</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Buscar..."
+                  className="input input-bordered input-sm"
+                  value={filters.apellidoMaterno}
+                  onChange={(e) => setFilters({ ...filters, apellidoMaterno: e.target.value })}
                 />
               </div>
             </div>
@@ -225,19 +270,20 @@ export default function UsersCrud() {
               <th>Usuario</th>
               <th>Rol</th>
               <th>Nombre</th>
-              <th>Apellido</th>
+              <th>Apellido Paterno</th>
+              <th>Apellido Materno</th>
               <th className="text-center">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {filteredUsers.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center py-8 text-base-content/50">
+                <td colSpan={6} className="text-center py-8 text-base-content/50">
                   {hasActiveFilters ? 'No se encontraron usuarios con los filtros aplicados' : 'No hay usuarios registrados'}
                 </td>
               </tr>
             ) : (
-              filteredUsers.map(user => (
+              paginatedUsers.map(user => (
                 <tr key={user.id} className="hover">
                   <td>
                     <div className="flex items-center gap-3">
@@ -254,11 +300,14 @@ export default function UsersCrud() {
                   </td>
                   <td>
                     <span className={`badge ${user.role === 'admin' ? 'badge-primary' : 'badge-secondary'}`}>
-                      {user.role === 'admin' ? 'Administrador' : 'Médico'}
+                      {user.role === 'admin' ? 'Administrador' : user.role === 'doctor' ? 'Médico' : user.role}
                     </span>
                   </td>
-                  <td>{user.first_name || '-'}</td>
-                  <td>{user.last_name || '-'}</td>
+                  <td>
+                    {user.first_name || '-'} {user.second_name || ''}
+                  </td>
+                  <td>{user.paternal_surname || '-'}</td>
+                  <td>{user.maternal_surname || '-'}</td>
                   <td className="text-center">
                     <button
                       className="btn btn-ghost btn-circle btn-sm"
@@ -275,14 +324,51 @@ export default function UsersCrud() {
         </table>
       </div>
 
-      {/* Contador de resultados */}
-      <div className="mt-4 text-sm text-base-content/70 text-center">
-        Mostrando {filteredUsers.length} de {users.length} usuarios
+      {/* Paginación */}
+      <div className="flex items-center justify-between mt-4">
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-base-content/70">Mostrar</label>
+          <select
+            className="select select-bordered select-sm"
+            value={pageSize}
+            onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+          >
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+          </select>
+          <span className="text-sm text-base-content/70">por página</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button className="btn btn-ghost btn-sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>Anterior</button>
+          <span className="text-sm">Página {currentPage} de {totalPages}</span>
+          <button className="btn btn-ghost btn-sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>Siguiente</button>
+        </div>
       </div>
 
-      {/* Modal */}
-      {isModalOpen && (
-        <UserModal
+      {/* Contador de resultados */}
+      <div className="mt-4 text-sm text-base-content/70 text-center">
+        {filteredUsers.length === 0 ? (
+          'Mostrando 0 de 0 usuarios'
+        ) : (
+          (() => {
+            const start = (currentPage - 1) * pageSize + 1
+            const end = Math.min(currentPage * pageSize, filteredUsers.length)
+            return `Mostrando ${start}-${end} de ${filteredUsers.length} usuarios`
+          })()
+        )}
+      </div>
+
+      {/* Modales */}
+      {isModalOpen && !editingUser && (
+        <CrearUsuarioModal
+          onClose={handleCloseModal}
+          onSave={handleSave}
+        />
+      )}
+
+      {isModalOpen && editingUser && (
+        <EditarUsuarioModal
           user={editingUser}
           onClose={handleCloseModal}
           onSave={handleSave}

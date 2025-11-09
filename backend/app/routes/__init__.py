@@ -4,6 +4,8 @@ from .users import users_bp
 from .patients import patients_bp
 from .diagnoses import diagnoses_bp
 from .diseases import diseases_bp
+from .symptoms import symptoms_bp
+from .signs import signs_bp
 
 
 def register_blueprints(app):
@@ -14,3 +16,5 @@ def register_blueprints(app):
     app.register_blueprint(patients_bp)
     app.register_blueprint(diagnoses_bp)
     app.register_blueprint(diseases_bp)
+    app.register_blueprint(symptoms_bp)
+    app.register_blueprint(signs_bp)

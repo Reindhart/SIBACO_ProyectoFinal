@@ -9,7 +9,9 @@ type UserItem = {
   email: string
   role: 'admin' | 'doctor'
   first_name?: string
-  last_name?: string
+  second_name?: string
+  paternal_surname?: string
+  maternal_surname?: string
   phone?: string
   is_active: boolean
 }
@@ -17,46 +19,47 @@ type UserItem = {
 interface UserFormData {
   username: string
   email: string
-  password?: string
-  confirmPassword?: string
   first_name: string
-  last_name: string
+  second_name?: string
+  paternal_surname: string
+  maternal_surname: string
   phone?: string
   role: 'admin' | 'doctor'
 }
 
-interface UserModalProps {
-  user: UserItem | null
+interface EditarUsuarioModalProps {
+  user: UserItem
   onClose: () => void
   onSave: () => void
 }
 
-export default function UserModal({ user, onClose, onSave }: UserModalProps) {
-  const isEditing = !!user
+export default function EditarUsuarioModal({ user, onClose, onSave }: EditarUsuarioModalProps) {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
-  const { register, handleSubmit, watch, reset, formState: { errors, isSubmitting } } = useForm<UserFormData>({
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<UserFormData>({
     defaultValues: {
       role: 'doctor',
       first_name: '',
-      last_name: '',
+      second_name: '',
+      paternal_surname: '',
+      maternal_surname: '',
       username: '',
       email: '',
       phone: '',
     }
   })
 
-  const password = watch('password')
-
-  // Cargar datos del usuario si estamos editando
+  // Cargar datos del usuario
   useEffect(() => {
     if (user) {
       reset({
         username: user.username,
         email: user.email,
         first_name: user.first_name || '',
-        last_name: user.last_name || '',
+        second_name: user.second_name || '',
+        paternal_surname: user.paternal_surname || '',
+        maternal_surname: user.maternal_surname || '',
         phone: user.phone || '',
         role: user.role,
       })
@@ -68,24 +71,15 @@ export default function UserModal({ user, onClose, onSave }: UserModalProps) {
     setSuccess(null)
 
     try {
-      if (isEditing) {
-        // Actualizar usuario
-        const { password: _password, confirmPassword: _confirmPassword, ...updateData } = data
-        await apiClient.put(`/api/users/${user.id}`, updateData)
-        setSuccess('Usuario actualizado correctamente')
-      } else {
-        // Crear nuevo usuario
-        const { confirmPassword: _confirmPassword, ...createData } = data
-        await apiClient.post('/api/auth/register', createData)
-        setSuccess('Usuario creado correctamente')
-      }
+      await apiClient.put(`/api/users/${user.id}`, data)
+      setSuccess('Usuario actualizado correctamente')
 
       // Esperar un momento para mostrar el mensaje de éxito
       setTimeout(() => {
         onSave()
       }, 1000)
     } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'Error al guardar usuario')
+      setError(err.response?.data?.message || err.message || 'Error al actualizar usuario')
     }
   }
 
@@ -94,9 +88,7 @@ export default function UserModal({ user, onClose, onSave }: UserModalProps) {
       <div className="modal-box max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-2xl">
-            {isEditing ? 'Editar Usuario' : 'Crear Nuevo Usuario'}
-          </h3>
+          <h3 className="font-bold text-2xl">Editar Usuario</h3>
           <button
             className="btn btn-ghost btn-circle btn-sm"
             onClick={onClose}
@@ -122,17 +114,19 @@ export default function UserModal({ user, onClose, onSave }: UserModalProps) {
 
         {/* Form */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {/* Grid de 2 columnas para nombre */}
+          {/* Grid de 4 columnas para nombres */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="form-control w-full">
               <label className="label">
-                <span className="label-text font-semibold">Nombre</span>
+                <span className="label-text font-semibold">Primer Nombre *</span>
               </label>
               <input
                 type="text"
                 placeholder="Ej: Juan"
                 className={`input input-bordered w-full ${errors.first_name ? 'input-error' : ''}`}
-                {...register('first_name')}
+                {...register('first_name', {
+                  required: 'El primer nombre es requerido'
+                })}
                 disabled={isSubmitting}
               />
               {errors.first_name && (
@@ -144,18 +138,60 @@ export default function UserModal({ user, onClose, onSave }: UserModalProps) {
 
             <div className="form-control w-full">
               <label className="label">
-                <span className="label-text font-semibold">Apellido</span>
+                <span className="label-text font-semibold">Segundo Nombre</span>
               </label>
               <input
                 type="text"
-                placeholder="Ej: Pérez"
-                className={`input input-bordered w-full ${errors.last_name ? 'input-error' : ''}`}
-                {...register('last_name')}
+                placeholder="Ej: Carlos"
+                className={`input input-bordered w-full ${errors.second_name ? 'input-error' : ''}`}
+                {...register('second_name')}
                 disabled={isSubmitting}
               />
-              {errors.last_name && (
+              {errors.second_name && (
                 <label className="label">
-                  <span className="label-text-alt text-error">{errors.last_name.message}</span>
+                  <span className="label-text-alt text-error">{errors.second_name.message}</span>
+                </label>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="form-control w-full">
+              <label className="label">
+                <span className="label-text font-semibold">Apellido Paterno *</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Ej: García"
+                className={`input input-bordered w-full ${errors.paternal_surname ? 'input-error' : ''}`}
+                {...register('paternal_surname', {
+                  required: 'El apellido paterno es requerido'
+                })}
+                disabled={isSubmitting}
+              />
+              {errors.paternal_surname && (
+                <label className="label">
+                  <span className="label-text-alt text-error">{errors.paternal_surname.message}</span>
+                </label>
+              )}
+            </div>
+
+            <div className="form-control w-full">
+              <label className="label">
+                <span className="label-text font-semibold">Apellido Materno *</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Ej: López"
+                className={`input input-bordered w-full ${errors.maternal_surname ? 'input-error' : ''}`}
+                {...register('maternal_surname', {
+                  required: 'El apellido materno es requerido'
+                })}
+                disabled={isSubmitting}
+              />
+              {errors.maternal_surname && (
+                <label className="label">
+                  <span className="label-text-alt text-error">{errors.maternal_surname.message}</span>
                 </label>
               )}
             </div>
@@ -174,13 +210,11 @@ export default function UserModal({ user, onClose, onSave }: UserModalProps) {
                 required: 'El usuario es requerido',
                 minLength: { value: 3, message: 'El usuario debe tener al menos 3 caracteres' }
               })}
-              disabled={isSubmitting || isEditing}
+              disabled={true}
             />
-            {errors.username && (
-              <label className="label">
-                <span className="label-text-alt text-error">{errors.username.message}</span>
-              </label>
-            )}
+            <label className="label">
+              <span className="label-text-alt text-gray-500">El usuario no puede ser modificado</span>
+            </label>
           </div>
 
           {/* Email y Teléfono */}
@@ -248,56 +282,6 @@ export default function UserModal({ user, onClose, onSave }: UserModalProps) {
             )}
           </div>
 
-          {/* Contraseñas - Solo al crear */}
-          {!isEditing && (
-            <>
-              <div className="divider">Contraseña</div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="form-control w-full">
-                  <label className="label">
-                    <span className="label-text font-semibold">Contraseña *</span>
-                  </label>
-                  <input
-                    type="password"
-                    placeholder="Mínimo 6 caracteres"
-                    className={`input input-bordered w-full ${errors.password ? 'input-error' : ''}`}
-                    {...register('password', {
-                      required: 'La contraseña es requerida',
-                      minLength: { value: 6, message: 'La contraseña debe tener al menos 6 caracteres' }
-                    })}
-                    disabled={isSubmitting}
-                  />
-                  {errors.password && (
-                    <label className="label">
-                      <span className="label-text-alt text-error">{errors.password.message}</span>
-                    </label>
-                  )}
-                </div>
-
-                <div className="form-control w-full">
-                  <label className="label">
-                    <span className="label-text font-semibold">Confirmar Contraseña *</span>
-                  </label>
-                  <input
-                    type="password"
-                    placeholder="Repetir contraseña"
-                    className={`input input-bordered w-full ${errors.confirmPassword ? 'input-error' : ''}`}
-                    {...register('confirmPassword', {
-                      required: 'Debe confirmar la contraseña',
-                      validate: value => value === password || 'Las contraseñas no coinciden'
-                    })}
-                    disabled={isSubmitting}
-                  />
-                  {errors.confirmPassword && (
-                    <label className="label">
-                      <span className="label-text-alt text-error">{errors.confirmPassword.message}</span>
-                    </label>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-
           {/* Actions */}
           <div className="modal-action">
             <button
@@ -316,12 +300,12 @@ export default function UserModal({ user, onClose, onSave }: UserModalProps) {
               {isSubmitting ? (
                 <>
                   <span className="loading loading-spinner loading-sm"></span>
-                  Guardando...
+                  Actualizando...
                 </>
               ) : (
                 <>
                   <Save className="h-5 w-5" />
-                  {isEditing ? 'Actualizar' : 'Crear'}
+                  Actualizar Usuario
                 </>
               )}
             </button>

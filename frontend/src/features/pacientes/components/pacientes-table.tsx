@@ -1,14 +1,19 @@
-import { useState, useEffect } from 'react'
-import { UserPlus, FileText, Stethoscope, ChevronDown, ChevronRight, Filter, X, Edit } from 'lucide-react'
+import { Fragment, useState, useEffect, useRef } from 'react'
+import { UserPlus, FileText, Stethoscope, ChevronDown, ChevronRight, Filter, FunnelX, X, Edit } from 'lucide-react'
 import { apiClient } from '@/lib/api'
-import PatientModal from './crearPaciente-modal'
+import CreatePatientModal from './crearPaciente-modal'
+import EditPatientModal from './editarPaciente-modal'
 import DiagnosisModal from './crearDiagnostico-modal'
 import DiagnosisDetailModal from './verDiagnostico-modal'
 
 export type Patient = {
   id: number
   first_name: string
-  last_name: string
+  second_name?: string
+  paternal_surname?: string
+  maternal_surname?: string
+  full_name?: string
+  age?: number
   date_of_birth: string
   gender: string
   blood_type?: string
@@ -51,12 +56,16 @@ export type Diagnosis = {
   updated_at: string
   // Relaciones
   disease?: Disease
-  doctor?: { id: number; username: string; first_name?: string; last_name?: string }
+  doctor?: { id: number; username: string; first_name?: string; paternal_surname?: string }
 }
 
 export default function PatientsTable() {
   const [patients, setPatients] = useState<Patient[]>([])
   const [diagnoses, setDiagnoses] = useState<Record<number, Diagnosis[]>>({})
+  const [diagnosesLoading, setDiagnosesLoading] = useState<Record<number, boolean>>({})
+  // Cache TTL: guardar timestamp de cuando se cargaron los diagnósticos
+  const [diagnosesCache, setDiagnosesCache] = useState<Record<number, number>>({})
+  const CACHE_TTL = 5 * 60 * 1000 // 5 minutos en milisegundos
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
@@ -75,17 +84,46 @@ export default function PatientsTable() {
   const [showFilters, setShowFilters] = useState(false)
   const [filters, setFilters] = useState({
     nombre: '',
-    apellido: '',
+    apellidoPaterno: '',
+    apellidoMaterno: '',
     enfermedad: ''
   })
+  // Paginación
+  const [pageSize, setPageSize] = useState<number>(10)
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [totalCount, setTotalCount] = useState<number>(0)
+  const searchTimerRef = useRef<number | null>(null)
 
-  // Cargar pacientes
-  const fetchPatients = async () => {
+  // Cargar pacientes (soporta paginado y búsquedas)
+  const fetchPatients = async (opts?: { page?: number; page_size?: number; filters?: typeof filters }) => {
+    const page = opts?.page ?? 1
+    const page_size = opts?.page_size ?? pageSize
+    const f = opts?.filters
     try {
       setLoading(true)
       setError(null)
-      const response = await apiClient.get<{ status: string; data: Patient[] }>('/api/patients')
+
+      const params = new URLSearchParams()
+      params.set('page', String(page))
+      params.set('page_size', String(page_size))
+      if (f) {
+        if (f.nombre) params.set('nombre', f.nombre)
+        if (f.apellidoPaterno) params.set('apellido_paterno', f.apellidoPaterno)
+        if (f.apellidoMaterno) params.set('apellido_materno', f.apellidoMaterno)
+        if (f.enfermedad) params.set('enfermedad', f.enfermedad)
+      }
+
+      const url = `/api/patients?${params.toString()}`
+
+      const response = await apiClient.get<{ 
+        status: string; 
+        data: Patient[];
+        pagination?: { total_count: number; total_pages: number; page: number; page_size: number }
+      }>(url)
+
+      // Cuando hay filtros, backend devolverá los pacientes coincidentes (posiblemente con page_size grande)
       setPatients(response.data || [])
+      setTotalCount(response.pagination?.total_count ?? (response.data || []).length)
     } catch (err: any) {
       setError(err.message || 'Error al cargar pacientes')
       console.error('Error fetching patients:', err)
@@ -96,31 +134,75 @@ export default function PatientsTable() {
 
   // Cargar diagnósticos de un paciente
   const fetchPatientDiagnoses = async (patientId: number) => {
+    // Marcar como cargando para este paciente
+    setDiagnosesLoading(prev => ({ ...prev, [patientId]: true }))
     try {
       const response = await apiClient.get<{ status: string; data: Diagnosis[] }>(`/api/patients/${patientId}/diagnoses`)
       setDiagnoses(prev => ({ ...prev, [patientId]: response.data || [] }))
+      // Guardar timestamp del cache
+      setDiagnosesCache(prev => ({ ...prev, [patientId]: Date.now() }))
     } catch (err) {
       console.error('Error fetching diagnoses:', err)
+      setDiagnoses(prev => ({ ...prev, [patientId]: [] }))
+    } finally {
+      setDiagnosesLoading(prev => ({ ...prev, [patientId]: false }))
     }
   }
 
   useEffect(() => {
-    fetchPatients()
-  }, [])
+    // Inicial: cargar primera página sin filtros
+    fetchPatients({ page: 1, page_size: pageSize })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Cargar solo una vez al inicio
+  
+  // Resetear a página 1 cuando cambien los filtros
+  useEffect(() => {
+    setCurrentPage(1)
+    // Si no hay filtros activos: volver al modo paginado y recargar página 1
+    const hasFilters = Object.values(filters).some(v => v !== '')
+  if (!hasFilters) {
+      // cancelar debounce si existiera
+      if (searchTimerRef.current) {
+        window.clearTimeout(searchTimerRef.current)
+        searchTimerRef.current = null
+      }
+      fetchPatients({ page: 1, page_size: pageSize })
+    } else {
+      // Debounce: esperar 1s desde la última tecla
+      
+      if (searchTimerRef.current) window.clearTimeout(searchTimerRef.current)
+      searchTimerRef.current = window.setTimeout(() => {
+        // Pedimos muchos resultados para obtener el set completo de coincidencias
+        fetchPatients({ page: 1, page_size: 1000, filters })
+        searchTimerRef.current = null
+      }, 1000)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters])
 
   // Toggle expansión de fila
   const toggleRow = async (patientId: number) => {
     const newExpanded = new Set(expandedRows)
     if (newExpanded.has(patientId)) {
+      // Colapsar inmediatamente (pero mantener cache)
       newExpanded.delete(patientId)
-    } else {
-      newExpanded.add(patientId)
-      // Cargar diagnósticos si no están cargados
-      if (!diagnoses[patientId]) {
-        await fetchPatientDiagnoses(patientId)
-      }
+      setExpandedRows(newExpanded)
+      return
     }
+
+    // Expandir inmediatamente (optimistic UI)
+    newExpanded.add(patientId)
     setExpandedRows(newExpanded)
+
+    // Verificar si el cache es válido (menos de 5 minutos)
+    const cacheTimestamp = diagnosesCache[patientId]
+    const isCacheValid = cacheTimestamp && (Date.now() - cacheTimestamp < CACHE_TTL)
+    
+    // Si no tenemos diagnósticos, cache expirado, o no están cargando, solicitarlos
+    if ((!diagnoses[patientId] || !isCacheValid) && !diagnosesLoading[patientId]) {
+      // no await - cargar en background para que la UI se expanda de inmediato
+      fetchPatientDiagnoses(patientId)
+    }
   }
 
   const handleCreatePatient = () => {
@@ -186,32 +268,33 @@ export default function PatientsTable() {
   }
 
   const clearFilters = () => {
-    setFilters({ nombre: '', apellido: '', enfermedad: '' })
+    setFilters({ nombre: '', apellidoPaterno: '', apellidoMaterno: '', enfermedad: '' })
   }
 
-  const normalizeText = (text: string | undefined): string => {
-    if (!text) return ''
-    return text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-  }
+  // NOTE: la normalización para búsquedas se realiza en el servidor; si se necesita
+  // filtrar client-side en el futuro, podemos restaurar este helper.
 
   // Filtrar pacientes
-  const filteredPatients = patients.filter(patient => {
-    const matchNombre = normalizeText(patient.first_name).includes(normalizeText(filters.nombre))
-    const matchApellido = normalizeText(patient.last_name).includes(normalizeText(filters.apellido))
-    
-    // Filtro por enfermedad (buscar en diagnósticos)
-    let matchEnfermedad = true
-    if (filters.enfermedad) {
-      const patientDiagnoses = diagnoses[patient.id] || []
-      matchEnfermedad = patientDiagnoses.some(d => 
-        normalizeText(d.disease?.name).includes(normalizeText(filters.enfermedad))
-      )
-    }
-    
-    return matchNombre && matchApellido && matchEnfermedad
-  })
-
   const hasActiveFilters = Object.values(filters).some(v => v !== '')
+
+  // Paginación mixta:
+  // - Si hay filtros activos: asumimos que `patients` contiene el conjunto de coincidencias (pedimos page_size grande)
+  //   y hacemos paginación client-side sobre esos resultados.
+  // - Si no hay filtros: `patients` es la página devuelta por el servidor.
+  let totalPages = 1
+  let paginatedPatients: Patient[] = []
+  if (hasActiveFilters) {
+    const totalMatched = patients.length
+    totalPages = Math.max(1, Math.ceil(totalMatched / pageSize))
+    if (currentPage > totalPages && totalPages > 0) setCurrentPage(1)
+    paginatedPatients = patients.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  } else {
+    // Servidor aporta totalCount (número total de pacientes activos)
+    totalPages = Math.max(1, Math.ceil((totalCount || 0) / pageSize))
+    if (currentPage > totalPages && totalPages > 0) setCurrentPage(1)
+    paginatedPatients = patients // ya viene paginado desde el servidor
+  }
+
 
   // Obtener enfermedades únicas de un paciente
   const getPatientDiseases = (patientId: number): string[] => {
@@ -236,13 +319,24 @@ export default function PatientsTable() {
           <h1 className="text-2xl font-bold">Pacientes</h1>
           <p className="text-base-content/70">Gestiona los pacientes y sus diagnósticos</p>
         </div>
-        <div className="flex gap-2">
+          <div className="flex gap-2">
           <button
-            className="btn btn-ghost btn-circle"
-            onClick={() => setShowFilters(!showFilters)}
+            className={`btn btn-ghost btn-circle ${showFilters ? 'btn-active' : ''}`}
+            onClick={() => {
+              if (showFilters) {
+                // Solo limpiar filtros si hay alguno activo
+                if (hasActiveFilters) {
+                  clearFilters()
+                }
+                setShowFilters(false)
+              } else {
+                setShowFilters(true)
+              }
+              setCurrentPage(1)
+            }}
             title={showFilters ? "Ocultar filtros" : "Mostrar filtros"}
           >
-            <Filter className="h-5 w-5" />
+            {showFilters ? <FunnelX className="h-5 w-5" /> : <Filter className="h-5 w-5" />}
           </button>
           <button
             className="btn btn-primary btn-circle"
@@ -274,7 +368,7 @@ export default function PatientsTable() {
                 </button>
               )}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="form-control">
                 <label className="label">
                   <span className="label-text">Nombre</span>
@@ -289,14 +383,26 @@ export default function PatientsTable() {
               </div>
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text">Apellido</span>
+                  <span className="label-text">Apellido Paterno</span>
                 </label>
                 <input
                   type="text"
-                  placeholder="Buscar por apellido..."
+                  placeholder="Buscar..."
                   className="input input-bordered input-sm"
-                  value={filters.apellido}
-                  onChange={(e) => setFilters({ ...filters, apellido: e.target.value })}
+                  value={filters.apellidoPaterno}
+                  onChange={(e) => setFilters({ ...filters, apellidoPaterno: e.target.value })}
+                />
+              </div>
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Apellido Materno</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Buscar..."
+                  className="input input-bordered input-sm"
+                  value={filters.apellidoMaterno}
+                  onChange={(e) => setFilters({ ...filters, apellidoMaterno: e.target.value })}
                 />
               </div>
               <div className="form-control">
@@ -323,32 +429,33 @@ export default function PatientsTable() {
             <tr>
               <th className="w-12"></th>
               <th>Nombre</th>
-              <th>Apellido</th>
+              <th>Apellido Paterno</th>
+              <th>Apellido Materno</th>
               <th>Enfermedades</th>
               <th className="text-center">Acciones</th>
             </tr>
           </thead>
           <tbody>
-            {filteredPatients.length === 0 ? (
+            {paginatedPatients.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center py-8 text-base-content/50">
+                <td colSpan={6} className="text-center py-8 text-base-content/50">
                   {hasActiveFilters ? 'No se encontraron pacientes con los filtros aplicados' : 'No hay pacientes registrados'}
                 </td>
               </tr>
             ) : (
-              filteredPatients.map(patient => {
+              paginatedPatients.map(patient => {
                 const isExpanded = expandedRows.has(patient.id)
                 const patientDiagnoses = diagnoses[patient.id] || []
                 const diseases = getPatientDiseases(patient.id)
                 
                 return (
-                  <>
-                    {/* Fila principal */}
-                    <tr key={patient.id} className="hover">
+                  <Fragment key={patient.id}>
+                    {/* Fila principal (clicable para expandir) */}
+                    <tr key={patient.id} className="hover cursor-pointer" onClick={() => toggleRow(patient.id)}>
                       <td>
                         <button
                           className="btn btn-ghost btn-circle btn-xs"
-                          onClick={() => toggleRow(patient.id)}
+                          onClick={(e) => { e.stopPropagation(); toggleRow(patient.id); }}
                           title={isExpanded ? "Ocultar diagnósticos" : "Ver diagnósticos"}
                         >
                           {isExpanded ? (
@@ -364,19 +471,22 @@ export default function PatientsTable() {
                             <div className="bg-neutral text-neutral-content rounded-full w-10 h-10 flex items-center justify-center">
                               <span className="text-sm font-bold">
                                 {patient.first_name.substring(0, 1).toUpperCase()}
-                                {patient.last_name.substring(0, 1).toUpperCase()}
+                                {(patient.paternal_surname || '').substring(0, 1).toUpperCase()}
                               </span>
                             </div>
                           </div>
-                          <div className="font-semibold">{patient.first_name}</div>
+                          <div className="font-semibold">
+                            {patient.first_name} {patient.second_name || ''}
+                          </div>
                         </div>
                       </td>
-                      <td>{patient.last_name}</td>
+                      <td>{patient.paternal_surname || ''}</td>
+                      <td>{patient.maternal_surname || ''}</td>
                       <td>
                         {diseases.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
-                            {diseases.map((disease, idx) => (
-                              <span key={idx} className="badge badge-outline badge-sm">
+                            {diseases.map((disease) => (
+                              <span key={disease} className="badge badge-outline badge-sm">
                                 {disease}
                               </span>
                             ))}
@@ -389,14 +499,14 @@ export default function PatientsTable() {
                         <div className="flex justify-center gap-1">
                           <button
                             className="btn btn-ghost btn-circle btn-sm"
-                            onClick={() => handleEditPatient(patient)}
+                            onClick={(e) => { e.stopPropagation(); handleEditPatient(patient); }}
                             title="Editar paciente"
                           >
                             <Edit className="h-4 w-4" />
                           </button>
                           <button
                             className="btn btn-ghost btn-circle btn-sm"
-                            onClick={() => handleViewLastDiagnosis(patient)}
+                            onClick={(e) => { e.stopPropagation(); handleViewLastDiagnosis(patient); }}
                             title="Ver último diagnóstico"
                             disabled={diseases.length === 0}
                           >
@@ -404,7 +514,7 @@ export default function PatientsTable() {
                           </button>
                           <button
                             className="btn btn-primary btn-circle btn-sm"
-                            onClick={() => handleCreateDiagnosis(patient)}
+                            onClick={(e) => { e.stopPropagation(); handleCreateDiagnosis(patient); }}
                             title="Crear diagnóstico"
                           >
                             <Stethoscope className="h-4 w-4" />
@@ -416,13 +526,18 @@ export default function PatientsTable() {
                     {/* Fila expandida con historial de diagnósticos */}
                     {isExpanded && (
                       <tr>
-                        <td colSpan={5} className="bg-base-100 p-0">
+                        <td colSpan={6} className="bg-base-100 p-0">
                           <div className="p-4 bg-base-200/50">
                             <h4 className="font-semibold mb-3 flex items-center gap-2">
                               <FileText className="h-4 w-4" />
                               Historial de Diagnósticos
                             </h4>
-                            {patientDiagnoses.length === 0 ? (
+                            {diagnosesLoading[patient.id] ? (
+                              <div className="flex items-center gap-2">
+                                <span className="loading loading-spinner"></span>
+                                <span className="text-sm text-base-content/70">Cargando diagnósticos...</span>
+                              </div>
+                            ) : patientDiagnoses.length === 0 ? (
                               <p className="text-sm text-base-content/70 italic">
                                 No hay diagnósticos registrados para este paciente
                               </p>
@@ -481,7 +596,7 @@ export default function PatientsTable() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 )
               })
             )}
@@ -489,14 +604,51 @@ export default function PatientsTable() {
         </table>
       </div>
 
+      {/* Paginación */}
+      <div className="flex items-center justify-between mt-4">
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-base-content/70">Mostrar</label>
+          <select
+            className="select select-bordered select-sm"
+            value={pageSize}
+            onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+          >
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+          </select>
+          <span className="text-sm text-base-content/70">por página</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button className="btn btn-ghost btn-sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>Anterior</button>
+          <span className="text-sm">Página {currentPage} de {totalPages}</span>
+          <button className="btn btn-ghost btn-sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>Siguiente</button>
+        </div>
+      </div>
+
       {/* Contador */}
       <div className="mt-4 text-sm text-base-content/70 text-center">
-        Mostrando {filteredPatients.length} de {patients.length} pacientes
+        {(() => {
+          const total = hasActiveFilters ? patients.length : totalCount
+          if (!total) return 'Mostrando 0 de 0 pacientes'
+          const start = (currentPage - 1) * pageSize + 1
+          let end = 0
+          if (hasActiveFilters) {
+            end = Math.min(currentPage * pageSize, patients.length)
+          } else {
+            end = (currentPage - 1) * pageSize + paginatedPatients.length
+          }
+          return `Mostrando ${start}-${end} de ${total} pacientes${hasActiveFilters ? ' (filtrados)' : ''}`
+        })()}
       </div>
 
       {/* Modales */}
-      {isPatientModalOpen && (
-        <PatientModal
+      {isPatientModalOpen && !editingPatient && (
+        <CreatePatientModal onClose={handleClosePatientModal} onSave={handleSavePatient} />
+      )}
+
+      {isPatientModalOpen && editingPatient && (
+        <EditPatientModal
           patient={editingPatient}
           onClose={handleClosePatientModal}
           onSave={handleSavePatient}

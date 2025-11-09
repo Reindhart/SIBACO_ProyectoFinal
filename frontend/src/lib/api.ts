@@ -36,10 +36,7 @@ class ApiClient {
     // Agregar token si existe
     const token = localStorage.getItem('access_token')
     if (token) {
-      console.log('[DEBUG] Enviando token:', token.substring(0, 50) + '...')
       headers['Authorization'] = `Bearer ${token}`
-    } else {
-      console.log('[DEBUG] No hay token en localStorage')
     }
 
     const config: RequestInit = {

@@ -11,7 +11,9 @@ class RegisterSchema(Schema):
     email = fields.Email(required=True)
     password = fields.Str(required=True, validate=validate.Length(min=6))
     first_name = fields.Str(validate=validate.Length(max=100))
-    last_name = fields.Str(validate=validate.Length(max=100))
+    second_name = fields.Str(validate=validate.Length(max=100))
+    paternal_surname = fields.Str(validate=validate.Length(max=100))
+    maternal_surname = fields.Str(validate=validate.Length(max=100))
     phone = fields.Str(validate=validate.Length(max=20))
     role = fields.Str(validate=validate.OneOf(['admin', 'doctor']), load_default='doctor')
     
@@ -40,7 +42,9 @@ class UserSchema(Schema):
     username = fields.Str()
     email = fields.Email()
     first_name = fields.Str()
-    last_name = fields.Str()
+    second_name = fields.Str()
+    paternal_surname = fields.Str()
+    maternal_surname = fields.Str()
     full_name = fields.Str(dump_only=True)
     phone = fields.Str()
     role = fields.Str()
@@ -57,6 +61,8 @@ class ChangePasswordSchema(Schema):
 class UpdateProfileSchema(Schema):
     """Schema para actualización de perfil"""
     first_name = fields.Str(validate=validate.Length(max=100))
-    last_name = fields.Str(validate=validate.Length(max=100))
+    second_name = fields.Str(validate=validate.Length(max=100))
+    paternal_surname = fields.Str(validate=validate.Length(max=100))
+    maternal_surname = fields.Str(validate=validate.Length(max=100))
     phone = fields.Str(validate=validate.Length(max=20))
     email = fields.Email()
