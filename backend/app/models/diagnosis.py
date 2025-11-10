@@ -11,33 +11,19 @@ class Diagnosis(db.Model):
     __tablename__ = 'diagnoses'
     
     id = db.Column(db.Integer, primary_key=True)
-    
-    # Relaciones
     patient_id = db.Column(db.Integer, db.ForeignKey('patients.id'), nullable=False)
     doctor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     disease_code = db.Column(db.String(20), db.ForeignKey('diseases.code'), nullable=False)
-    
-    # Información del diagnóstico
     diagnosis_date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    
-    # Síntomas y signos presentados
     symptoms_presented = db.Column(db.Text)  # JSON string con los síntomas
-    signs_observed = db.Column(db.Text)  # JSON string con los signos
-    lab_results = db.Column(db.Text)  # JSON string con resultados de laboratorio
-    
-    # Resultado del motor de inferencia
+    signs_observed = db.Column(db.Text)  # JSON string con los signos y valores medidos
+    lab_results = db.Column(db.Text)  # JSON string con resultados de laboratorio y valores obtenidos
     confidence_score = db.Column(db.Float)  # Nivel de confianza del diagnóstico (0-100)
     inference_details = db.Column(db.Text)  # JSON string con detalles del proceso de inferencia
-    
-    # Diagnóstico diferencial
     alternative_diseases = db.Column(db.Text)  # JSON string con enfermedades alternativas y sus scores
-    
-    # Tratamiento
     treatment = db.Column(db.Text, nullable=False)
     treatment_start_date = db.Column(db.Date)
     treatment_end_date = db.Column(db.Date)
-    
-    # Notas adicionales del médico
     notes = db.Column(db.Text)
     
     # Seguimiento
@@ -47,6 +33,7 @@ class Diagnosis(db.Model):
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    deleted_at = db.Column(db.DateTime, nullable=True)
     
     # Relación con seguimientos
     follow_ups = db.relationship('FollowUp', backref='diagnosis', lazy='dynamic', cascade='all, delete-orphan')
@@ -73,6 +60,7 @@ class Diagnosis(db.Model):
             'follow_up_date': self.follow_up_date.isoformat() if self.follow_up_date else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'deleted_at': self.deleted_at.isoformat() if self.deleted_at else None,
         }
         
         if include_relations:
@@ -93,22 +81,12 @@ class FollowUp(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     diagnosis_id = db.Column(db.Integer, db.ForeignKey('diagnoses.id'), nullable=False)
-    
-    # Fecha del seguimiento
     follow_up_date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    
-    # Evolución del paciente
     patient_condition = db.Column(db.String(50))  # 'improved', 'stable', 'worsened', 'critical'
     symptoms_evolution = db.Column(db.Text)  # Descripción de la evolución de síntomas
-    
-    # Nuevos signos vitales o pruebas
     new_signs = db.Column(db.Text)  # JSON string con nuevos signos
     new_lab_results = db.Column(db.Text)  # JSON string con nuevos resultados
-    
-    # Ajustes en el tratamiento
     treatment_adjustments = db.Column(db.Text)
-    
-    # Notas del médico
     notes = db.Column(db.Text)
     
     # Próxima cita
@@ -117,6 +95,7 @@ class FollowUp(db.Model):
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    deleted_at = db.Column(db.DateTime, nullable=True)
     
     def to_dict(self):
         """Convierte el seguimiento a diccionario"""
@@ -132,6 +111,8 @@ class FollowUp(db.Model):
             'notes': self.notes,
             'next_follow_up_date': self.next_follow_up_date.isoformat() if self.next_follow_up_date else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'deleted_at': self.deleted_at.isoformat() if self.deleted_at else None,
         }
     
     def __repr__(self):

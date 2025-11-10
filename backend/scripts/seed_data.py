@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from app import create_app
 from app.extensions import db
-from app.models import User, Disease, Symptom, Sign, LabTest, Patient
+from app.models import User, Disease, Symptom, Sign, LabTest, PostmortemTest, Patient
 
 def create_test_data():
     """Crea datos de prueba en la base de datos"""
@@ -120,6 +120,16 @@ def create_test_data():
         
         # Crear enfermedades de ejemplo con códigos auto-generados
         diseases_data = [
+            # Persona saludable (para el seguimiento de paciente)
+            {
+                'code': 'SALUDABLE',
+                'name': 'Sin enfermedad',
+                'description': 'Paciente se encuentra saludable',
+                'category': 'SALUDABLE',
+                'severity': 'ninguna',
+                'treatment_recommendations': 'Ninguno',
+                'prevention_measures': 'Mantener hábitos saludables'
+            },
             # Enfermedades Respiratorias
             {
                 'code': 'RESP01',
@@ -1004,6 +1014,86 @@ def create_test_data():
                 'normal_range': '<40',
                 'unit': 'U/L'
             },
+            {
+                'code': 'LAB011',
+                'name': 'Troponina cardíaca',
+                'description': 'Marcador de daño miocárdico',
+                'category': 'Cardiología',
+                'normal_range': '<0.04',
+                'unit': 'ng/mL'
+            },
+            {
+                'code': 'LAB012',
+                'name': 'Péptido natriurético (BNP)',
+                'description': 'Marcador de insuficiencia cardíaca',
+                'category': 'Cardiología',
+                'normal_range': '<100',
+                'unit': 'pg/mL'
+            },
+            {
+                'code': 'LAB013',
+                'name': 'Dímero D',
+                'description': 'Marcador de trombosis y embolia',
+                'category': 'Hematología',
+                'normal_range': '<500',
+                'unit': 'ng/mL'
+            },
+            {
+                'code': 'LAB014',
+                'name': 'Gasometría arterial',
+                'description': 'pH, pO2, pCO2, bicarbonato',
+                'category': 'Respiratorio',
+                'normal_range': 'pH: 7.35-7.45',
+                'unit': 'Variable'
+            },
+            {
+                'code': 'LAB015',
+                'name': 'Electrolitos séricos',
+                'description': 'Na, K, Cl, Ca, Mg',
+                'category': 'Bioquímica',
+                'normal_range': 'Variable',
+                'unit': 'mEq/L'
+            },
+            {
+                'code': 'LAB016',
+                'name': 'Procalcitonina',
+                'description': 'Marcador específico de infección bacteriana',
+                'category': 'Inmunología',
+                'normal_range': '<0.5',
+                'unit': 'ng/mL'
+            },
+            {
+                'code': 'LAB017',
+                'name': 'Lactato sérico',
+                'description': 'Marcador de hipoxia tisular y sepsis',
+                'category': 'Bioquímica',
+                'normal_range': '0.5-2.2',
+                'unit': 'mmol/L'
+            },
+            {
+                'code': 'LAB018',
+                'name': 'Cultivo de sangre (hemocultivo)',
+                'description': 'Identificación de bacterias en sangre',
+                'category': 'Microbiología',
+                'normal_range': 'Negativo',
+                'unit': 'Cualitativo'
+            },
+            {
+                'code': 'LAB019',
+                'name': 'Radiografía de tórax',
+                'description': 'Imagen de campos pulmonares y mediastino',
+                'category': 'Imagenología',
+                'normal_range': 'Sin alteraciones',
+                'unit': 'Cualitativo'
+            },
+            {
+                'code': 'LAB020',
+                'name': 'Electrocardiograma (ECG)',
+                'description': 'Registro de actividad eléctrica cardíaca',
+                'category': 'Cardiología',
+                'normal_range': 'Ritmo sinusal normal',
+                'unit': 'Cualitativo'
+            },
         ]
         
         for lab_test_data in lab_tests_data:
@@ -1017,7 +1107,266 @@ def create_test_data():
         
         db.session.commit()
         
+        # ==================== PRUEBAS POST-MORTEM ====================
+        print("\n⚰️  PRUEBAS POST-MORTEM (AUTOPSIAS)")
+        print("-" * 60)
+        
+        postmortem_data = [
+            {
+                'code': 'PM001',
+                'autopsy_date': date(2024, 3, 15),
+                'death_cause': 'Neumonía bacteriana bilateral complicada con insuficiencia respiratoria aguda',
+                'disease_diagnosis': 'RESP03',
+                'macro_findings': 'Pulmones aumentados de tamaño y peso (derecho 850g, izquierdo 720g). Consolidación hepatizada en lóbulos inferiores bilaterales. Pleura con adherencias fibrinosas.',
+                'histology': 'Infiltración extensa de neutrófilos en alvéolos. Exudado fibrinopurulento. Membranas hialinas en algunos sectores. Bronquios con descamación epitelial.',
+                'toxicology_results': 'Negativo para sustancias ilícitas. Niveles terapéuticos de antibióticos.',
+                'genetic_results': 'No se realizaron estudios genéticos',
+                'pathologic_correlation': 'Alta concordancia. Diagnóstico clínico de neumonía severa confirmado por hallazgos anatomopatológicos.',
+                'observations': 'Paciente con antecedentes de EPOC y tabaquismo. Cultivo post-mortem positivo para Streptococcus pneumoniae.'
+            },
+            {
+                'code': 'PM002',
+                'autopsy_date': date(2024, 4, 10),
+                'death_cause': 'Infarto agudo de miocardio transmural de pared anterior',
+                'disease_diagnosis': 'CARD02',
+                'macro_findings': 'Corazón aumentado de peso (420g). Zona de necrosis extensa en pared anterior del ventrículo izquierdo. Aterosclerosis severa de arterias coronarias con estenosis >90% de descendente anterior.',
+                'histology': 'Necrosis coagulativa de miocitos con infiltración de neutrófilos. Banda de contracción visible. Hemorragia intersticial.',
+                'toxicology_results': 'Negativo',
+                'genetic_results': 'No realizados',
+                'pathologic_correlation': 'Concordancia completa. Sospecha clínica de IAM confirmada.',
+                'observations': 'Antecedentes de hipertensión y dislipidemia no controladas. Paciente fumador activo.'
+            },
+            {
+                'code': 'PM003',
+                'autopsy_date': date(2024, 5, 22),
+                'death_cause': 'Peritonitis difusa secundaria a apendicitis gangrenosa perforada con shock séptico',
+                'disease_diagnosis': 'GASTR03',
+                'macro_findings': 'Apéndice cecal gangrenoso con perforación de 0.5cm en punta. Peritoneo con exudado purulento difuso (aprox. 800ml). Asas intestinales congestivas y adheridas.',
+                'histology': 'Necrosis transmural del apéndice con infiltración masiva de polimorfonucleares. Apendicolito en luz. Serositis purulenta extensa.',
+                'toxicology_results': 'Negativo',
+                'genetic_results': 'No indicados',
+                'pathologic_correlation': 'Concordancia alta. Sospecha de abdomen agudo quirúrgico confirmada como apendicitis complicada.',
+                'observations': 'Paciente consultó tardíamente (>48h de evolución). No se realizó cirugía por inestabilidad hemodinámica severa.'
+            },
+            {
+                'code': 'PM004',
+                'autopsy_date': date(2024, 6, 8),
+                'death_cause': 'Cetoacidosis diabética con edema cerebral',
+                'disease_diagnosis': 'METAB01',
+                'macro_findings': 'Cerebro edematoso con peso aumentado (1520g). Herniación uncal bilateral. Páncreas con atrofia moderada. Riñones con cambios de nefropatía diabética incipiente.',
+                'histology': 'Edema cerebral difuso con vacuolización. Islotes pancreáticos con fibrosis y reducción de células beta. Microangiopatía renal.',
+                'toxicology_results': 'Glucosa post-mortem elevada. Cuerpos cetónicos positivos en sangre y orina.',
+                'genetic_results': 'No realizados',
+                'pathologic_correlation': 'Concordancia completa. Diagnóstico clínico de CAD confirmado.',
+                'observations': 'Paciente diabético tipo 1 con pobre adherencia al tratamiento. Abandono de insulinoterapia documentado.'
+            },
+            {
+                'code': 'PM005',
+                'autopsy_date': date(2024, 7, 14),
+                'death_cause': 'Síndrome de Distrés Respiratorio Agudo secundario a Influenza A H1N1',
+                'disease_diagnosis': 'RESP02',
+                'macro_findings': 'Pulmones pesados y congestivos (derecho 920g, izquierdo 840g). Hemorragia alveolar difusa bilateral. Membranas hialinas visibles en superficie de corte.',
+                'histology': 'Daño alveolar difuso con membranas hialinas prominentes. Neumonía intersticial viral. Descamación de neumocitos tipo II. Trombosis microvascular.',
+                'toxicology_results': 'Negativo',
+                'genetic_results': 'PCR post-mortem confirma virus Influenza A H1N1',
+                'pathologic_correlation': 'Alta concordancia. Sospecha de gripe severa con SDRA confirmada.',
+                'observations': 'Paciente no vacunado. Consulta tardía con progresión rápida a falla respiratoria.'
+            },
+            {
+                'code': 'PM006',
+                'autopsy_date': date(2024, 8, 3),
+                'death_cause': 'Tromboembolismo pulmonar masivo bilateral',
+                'disease_diagnosis': 'CARD01',
+                'macro_findings': 'Tromboembolos masivos en arterias pulmonares principales bilaterales (trombo en silla de montar). Ventrículo derecho dilatado. Trombosis venosa profunda en vena femoral izquierda.',
+                'histology': 'Trombos organizados con líneas de Zahn. Infarto pulmonar hemorrágico en lóbulos inferiores. Hipertrofia de ventrículo derecho.',
+                'toxicology_results': 'Negativo',
+                'genetic_results': 'Estudio de trombofilias pendiente al momento de la muerte',
+                'pathologic_correlation': 'Discordancia moderada. Muerte súbita sin sospecha clínica de TEP.',
+                'observations': 'Paciente con inmovilización prolongada post-fractura de fémur. No recibió profilaxis antitrombótica.'
+            },
+            {
+                'code': 'PM007',
+                'autopsy_date': date(2024, 9, 12),
+                'death_cause': 'Shock hipovolémico por deshidratación severa secundaria a gastroenteritis aguda',
+                'disease_diagnosis': 'GASTR01',
+                'macro_findings': 'Deshidratación severa con pérdida del 15% del peso corporal. Mucosa intestinal congestiva y edematosa. Contenido líquido abundante en intestino delgado.',
+                'histology': 'Enteritis aguda con acortamiento de vellosidades. Infiltrado linfocitario en lámina propia. Criptas hiperplásicas.',
+                'toxicology_results': 'Negativo',
+                'genetic_results': 'PCR positivo para Rotavirus',
+                'pathologic_correlation': 'Alta concordancia. Diarrea severa documentada clínicamente.',
+                'observations': 'Paciente pediátrico de 2 años. Acceso tardío a rehidratación.'
+            },
+            {
+                'code': 'PM008',
+                'autopsy_date': date(2024, 10, 5),
+                'death_cause': 'Insuficiencia cardíaca derecha (cor pulmonale) secundaria a EPOC avanzado',
+                'disease_diagnosis': 'RESP04',
+                'macro_findings': 'Pulmones enfisematosos con bullae múltiples. Bronquios con hiperplasia mucosa y tapones mucopurulentos. Corazón con hipertrofia de ventrículo derecho (pared 8mm).',
+                'histology': 'Hiperplasia de glándulas mucosas bronquiales. Fibrosis peribronquial. Destrucción de septos alveolares (enfisema centroacinar). Hipertrofia de músculo liso vascular pulmonar.',
+                'toxicology_results': 'Nicotina y cotinina elevadas',
+                'genetic_results': 'Déficit de alfa-1 antitripsina descartado',
+                'pathologic_correlation': 'Concordancia completa. EPOC terminal documentado.',
+                'observations': 'Tabaquismo de 45 paquetes-año. Oxigenoterapia domiciliaria previa.'
+            },
+            {
+                'code': 'PM009',
+                'autopsy_date': date(2024, 11, 18),
+                'death_cause': 'Hemorragia intracerebral masiva por ruptura de aneurisma en contexto de crisis hipertensiva',
+                'disease_diagnosis': 'CARD01',
+                'macro_findings': 'Hematoma intracerebral en ganglios basales izquierdos de 60ml. Inundación ventricular. Herniación uncal. Corazón hipertrófico (peso 480g). Nefroesclerosis bilateral.',
+                'histology': 'Necrosis fibrinoide de arteriolas cerebrales. Hipertrofia concéntrica de ventrículo izquierdo. Esclerosis glomerular en 40% de glomérulos renales.',
+                'toxicology_results': 'Niveles subterapéuticos de antihipertensivos',
+                'genetic_results': 'No realizados',
+                'pathologic_correlation': 'Alta concordancia. Hipertensión no controlada con complicación cerebrovascular.',
+                'observations': 'Pobre adherencia farmacológica documentada. Múltiples consultas previas por emergencias hipertensivas.'
+            },
+            {
+                'code': 'PM010',
+                'autopsy_date': date(2024, 12, 1),
+                'death_cause': 'Shock séptico por pielonefritis aguda bilateral con falla multiorgánica',
+                'disease_diagnosis': 'INFEC01',
+                'macro_findings': 'Riñones aumentados de tamaño con múltiples microabscesos corticales bilaterales. Pulmones congestivos con SDRA incipiente. Hígado con esteatosis y necrosis centrolobulillar.',
+                'histology': 'Pielonefritis aguda supurativa con destrucción tubular. Infiltrado masivo de polimorfonucleares. Bacterias gram-negativas en túbulos. Necrosis tubular aguda.',
+                'toxicology_results': 'Niveles terapéuticos de antibióticos de amplio espectro',
+                'genetic_results': 'No realizados',
+                'pathologic_correlation': 'Concordancia alta. Sepsis de foco urinario sospechada clínicamente.',
+                'observations': 'Paciente diabético con vejiga neurogénica. Cultivo post-mortem: E. coli multiresistente.'
+            },
+            {
+                'code': 'PM011',
+                'autopsy_date': date(2025, 1, 10),
+                'death_cause': 'Neumonía nosocomial con insuficiencia respiratoria y choque séptico',
+                'disease_diagnosis': 'RESP03',
+                'macro_findings': 'Pulmones con consolidaciones multilobares y abscesificación parcial. Derrame pleural serofibrinoso bilateral.',
+                'histology': 'Neumonía supurativa con abscesos y necrosis del parénquima. Infiltrado neutrofílico intenso en bronquios y alveolos.',
+                'toxicology_results': 'Negativo',
+                'genetic_results': 'No realizados',
+                'pathologic_correlation': 'Concordancia alta con cuadro clínico de infección nosocomial severa.',
+                'observations': 'Ingreso prolongado en UCI tras cirugía mayor. Cultivos positivos para Pseudomonas aeruginosa.'
+            },
+            {
+                'code': 'PM012',
+                'autopsy_date': date(2025, 2, 2),
+                'death_cause': 'Ruptura de úlcera péptica con peritonitis química y séptica',
+                'disease_diagnosis': 'GASTR03',
+                'macro_findings': 'Peritoneo con contenido seroso y fecaloideo. Úlcera perforada en antro pilórico de 1cm. Líquido peritoneal turbio.',
+                'histology': 'Úlcera con necrosis y colonización bacteriana. Serositis purulenta difusa.',
+                'toxicology_results': 'Negativo',
+                'genetic_results': 'No realizados',
+                'pathologic_correlation': 'Sospecha clínica de abdomen agudo confirmada por hallazgos.',
+                'observations': 'Antecedente de AINEs crónicos y gastritis previa.'
+            },
+            {
+                'code': 'PM013',
+                'autopsy_date': date(2025, 3, 18),
+                'death_cause': 'Parada cardiorrespiratoria por arritmia ventricular en paciente con cardiopatía isquémica',
+                'disease_diagnosis': 'CARD02',
+                'macro_findings': 'Corazón con cicatriz subendocárdica en pared anterior. Aterosclerosis coronaria de múltiples vasos.',
+                'histology': 'Fibrosis miocárdica antigua y zonas de necrosis reorganizada. Cambios isquémicos cronificados.',
+                'toxicology_results': 'Negativo',
+                'genetic_results': 'No realizados',
+                'pathologic_correlation': 'Concordancia con historia de angina crónica e IAM previo.',
+                'observations': 'Reposo cardiaco súbito sin angina reciente documentada.'
+            },
+            {
+                'code': 'PM014',
+                'autopsy_date': date(2025, 4, 7),
+                'death_cause': 'Insuficiencia renal aguda sobre crónica secundaria a descompensación cardíaca congestiva',
+                'disease_diagnosis': 'METAB02',
+                'macro_findings': 'Riñones pequeños con cicatrices corticales y congestión pulmonar. Edema generalizado.',
+                'histology': 'Necrosis tubular aguda superpuesta a glomeruloesclerosis crónica. Congestión vascular marcada.',
+                'toxicology_results': 'Negativo',
+                'genetic_results': 'No realizados',
+                'pathologic_correlation': 'Concordancia parcial; insuficiencia renal clinicamente documentada.',
+                'observations': 'Historia de insuficiencia cardíaca crónica y diurético mal control.'
+            },
+            {
+                'code': 'PM015',
+                'autopsy_date': date(2025, 5, 21),
+                'death_cause': 'Complicaciones hemorrágicas por anticoagulación excesiva (hemorragia gastrointestinal)',
+                'disease_diagnosis': 'GASTR02',
+                'macro_findings': 'Contenido intestinal con sangre fresca. Úlcera gástrica sangrante en curvatura menor.',
+                'histology': 'Úlcera activa con vasos erosionados. Mucosa gástrica congestiva e inflamatoria.',
+                'toxicology_results': 'Niveles altos de anticoagulante oral detectados',
+                'genetic_results': 'No realizados',
+                'pathologic_correlation': 'Concordancia alta con historia de terapia anticoagulante.',
+                'observations': 'Paciente en tratamiento con anticoagulantes orales por FA.'
+            },
+            {
+                'code': 'PM016',
+                'autopsy_date': date(2025, 6, 12),
+                'death_cause': 'Tromboembolismo pulmonar masivo en paciente posoperatorio',
+                'disease_diagnosis': 'CARD01',
+                'macro_findings': 'Trombo en arteria pulmonar principal derecha, infartos pulmonares multifocales.',
+                'histology': 'Trombo reciente con líneas de Zahn y áreas de infarto pulmonar hemorrágico.',
+                'toxicology_results': 'Negativo',
+                'genetic_results': 'No realizados',
+                'pathologic_correlation': 'Muerte súbita por TEP confirmada.',
+                'observations': 'Cirugía ortopédica reciente y periodo de inmovilización.'
+            },
+            {
+                'code': 'PM017',
+                'autopsy_date': date(2025, 7, 2),
+                'death_cause': 'Shock séptico por neumonía aspirativa en paciente anciano dependiente',
+                'disease_diagnosis': 'RESP02',
+                'macro_findings': 'Pulmones con material alimentario en vías aéreas, consolidación en lóbulos superiores.',
+                'histology': 'Neumonía aspirativa con necrosis y reacción inflamatoria mixta. Cuerpos extraños alimentarios visibles.',
+                'toxicology_results': 'Negativo',
+                'genetic_results': 'No realizados',
+                'pathologic_correlation': 'Concordancia con historia clínica de disfagia y episodios de aspiración.',
+                'observations': 'Paciente con enfermedad neurodegenerativa y alimentación por sonda via oral suspendida.'
+            },
+            {
+                'code': 'PM018',
+                'autopsy_date': date(2025, 8, 16),
+                'death_cause': 'Falla multisistémica por sepsis abdominal (perforación intestinal)',
+                'disease_diagnosis': 'INFEC02',
+                'macro_findings': 'Peritoneo con exudado purulento y material intestinal perforado. Asas adheridas y necróticas.',
+                'histology': 'Peritonitis fibrinopurulenta extensa con necrosis tisular. Bacterias gram-negativas y anaerobias presentes.',
+                'toxicology_results': 'Negativo',
+                'genetic_results': 'No realizados',
+                'pathologic_correlation': 'Concordancia alta con cuadro séptico abdominal.',
+                'observations': 'Historia de diverticulitis crónica complicándose en perforación.'
+            },
+            {
+                'code': 'PM019',
+                'autopsy_date': date(2025, 9, 3),
+                'death_cause': 'Síncope seguido de muerte súbita por cardiopatía arrítmica',
+                'disease_diagnosis': 'CARD02',
+                'macro_findings': 'Corazón con dilatación moderada del ventrículo izquierdo y miocardiopatía difusa.',
+                'histology': 'Fibrosis intersticial difusa y cambios degenerativos en miocitos. Focos de inflamación crónica.',
+                'toxicology_results': 'Negativo',
+                'genetic_results': 'No realizados',
+                'pathologic_correlation': 'Concordancia moderada; posible miocardiopatía primaria.',
+                'observations': 'Antecedente de síncope recurrente y arritmias documentadas en monitor.'
+            },
+            {
+                'code': 'PM020',
+                'autopsy_date': date(2025, 10, 11),
+                'death_cause': 'Complicación hemorrágica intracraneal en paciente anticoagulado',
+                'disease_diagnosis': 'CARD01',
+                'macro_findings': 'Hematoma subdural crónico con re-hemorragia aguda. Signos de hipertensión crónica vascular cerebral.',
+                'histology': 'Hematoma con capas de fibrina y organización; vasos con cambios hialinos.',
+                'toxicology_results': 'Niveles de anticoagulación en rango supraterapéutico',
+                'genetic_results': 'No realizados',
+                'pathologic_correlation': 'Alta concordancia con tratamiento anticoagulante y presentación clínica.',
+                'observations': 'Paciente en anticoagulación por prótesis valvular. Traumatismo mínimo previo relatado por familiares.'
+            }
+        ]
+        
+        for pm_data in postmortem_data:
+            pm_test = PostmortemTest.query.filter_by(code=pm_data['code']).first()
+            if not pm_test:
+                pm_test = PostmortemTest(**pm_data)
+                db.session.add(pm_test)
+                print(f"✅ {pm_data['code']}: {pm_data['death_cause'][:50]}...")
+            else:
+                print(f"ℹ️  {pm_data['code']} ya existe")
+        
+        db.session.commit()
+        
         # ==================== ASOCIACIONES ENFERMEDAD-SÍNTOMAS ====================
+
         print("\n📋 ASOCIACIONES ENFERMEDAD-SÍNTOMAS")
         print("-" * 60)
         
@@ -1608,6 +1957,162 @@ def create_test_data():
         else:
             print("⚠️  No hay médicos disponibles para asignar pacientes")
         
+        # ==================== ASOCIACIONES ENFERMEDAD-PRUEBAS DE LABORATORIO ====================
+        print("\n🔬 ASOCIACIONES ENFERMEDAD-PRUEBAS DE LABORATORIO")
+        print("-" * 60)
+        
+        # Obtener pruebas de laboratorio
+        lab001 = LabTest.query.filter_by(code='LAB001').first()  # Hemograma completo
+        lab002 = LabTest.query.filter_by(code='LAB002').first()  # Glucosa en ayunas
+        lab003 = LabTest.query.filter_by(code='LAB003').first()  # Creatinina
+        lab004 = LabTest.query.filter_by(code='LAB004').first()  # Hemoglobina glucosilada
+        lab005 = LabTest.query.filter_by(code='LAB005').first()  # Urea
+        lab006 = LabTest.query.filter_by(code='LAB006').first()  # Perfil lipídico
+        lab007 = LabTest.query.filter_by(code='LAB007').first()  # Examen general de orina
+        lab008 = LabTest.query.filter_by(code='LAB008').first()  # PCR
+        lab009 = LabTest.query.filter_by(code='LAB009').first()  # VSG
+        lab010 = LabTest.query.filter_by(code='LAB010').first()  # Enzimas hepáticas
+        lab011 = LabTest.query.filter_by(code='LAB011').first()  # Troponina
+        lab012 = LabTest.query.filter_by(code='LAB012').first()  # BNP
+        lab013 = LabTest.query.filter_by(code='LAB013').first()  # Dímero D
+        lab014 = LabTest.query.filter_by(code='LAB014').first()  # Gasometría
+        lab015 = LabTest.query.filter_by(code='LAB015').first()  # Electrolitos
+        lab016 = LabTest.query.filter_by(code='LAB016').first()  # Procalcitonina
+        lab017 = LabTest.query.filter_by(code='LAB017').first()  # Lactato
+        lab018 = LabTest.query.filter_by(code='LAB018').first()  # Hemocultivo
+        lab019 = LabTest.query.filter_by(code='LAB019').first()  # Radiografía tórax
+        lab020 = LabTest.query.filter_by(code='LAB020').first()  # ECG
+        
+        def add_lab_tests_if_not_exist(disease, lab_tests_list, disease_name):
+            added = 0
+            for lab_test in lab_tests_list:
+                if lab_test and lab_test not in disease.lab_tests.all():
+                    disease.lab_tests.append(lab_test)
+                    added += 1
+            if added > 0:
+                print(f"✅ {disease_name} asociado con {added} pruebas de laboratorio nuevas")
+            else:
+                print(f"ℹ️  {disease_name} ya tiene todas las pruebas de laboratorio")
+        
+        if resp01:  # Resfriado común
+            add_lab_tests_if_not_exist(resp01, [lab001, lab008], "RESP01")
+        
+        if resp02:  # Gripe
+            add_lab_tests_if_not_exist(resp02, [lab001, lab008, lab009, lab019], "RESP02")
+        
+        if resp03:  # Neumonía
+            add_lab_tests_if_not_exist(resp03, [lab001, lab008, lab016, lab017, lab018, lab019, lab014], "RESP03")
+        
+        if resp04:  # Bronquitis/EPOC
+            add_lab_tests_if_not_exist(resp04, [lab001, lab014, lab019], "RESP04")
+        
+        if gastr01:  # Gastroenteritis
+            add_lab_tests_if_not_exist(gastr01, [lab001, lab015, lab003], "GASTR01")
+        
+        if gastr02:  # Gastritis
+            add_lab_tests_if_not_exist(gastr02, [lab001, lab010], "GASTR02")
+        
+        if gastr03:  # Apendicitis
+            add_lab_tests_if_not_exist(gastr03, [lab001, lab008, lab016], "GASTR03")
+        
+        if card01:  # Hipertensión
+            add_lab_tests_if_not_exist(card01, [lab003, lab005, lab015, lab007, lab020], "CARD01")
+        
+        if card02:  # Insuficiencia cardíaca/IAM
+            add_lab_tests_if_not_exist(card02, [lab011, lab012, lab013, lab020, lab001, lab015], "CARD02")
+        
+        if metab01:  # Diabetes
+            add_lab_tests_if_not_exist(metab01, [lab002, lab004, lab003, lab005, lab007], "METAB01")
+        
+        if metab02:  # Hipotiroidismo
+            add_lab_tests_if_not_exist(metab02, [lab006, lab002], "METAB02")
+        
+        if infec01:  # ITU
+            add_lab_tests_if_not_exist(infec01, [lab007, lab001, lab008, lab018], "INFEC01")
+        
+        if infec02:  # Faringitis
+            add_lab_tests_if_not_exist(infec02, [lab001, lab008], "INFEC02")
+        
+        db.session.commit()
+        
+        # ==================== ASOCIACIONES ENFERMEDAD-PRUEBAS POST-MORTEM ====================
+        print("\n⚰️  ASOCIACIONES ENFERMEDAD-PRUEBAS POST-MORTEM")
+        print("-" * 60)
+        
+        # Obtener pruebas post-mortem
+        pm001 = PostmortemTest.query.filter_by(code='PM001').first()
+        pm002 = PostmortemTest.query.filter_by(code='PM002').first()
+        pm003 = PostmortemTest.query.filter_by(code='PM003').first()
+        pm004 = PostmortemTest.query.filter_by(code='PM004').first()
+        pm005 = PostmortemTest.query.filter_by(code='PM005').first()
+        pm006 = PostmortemTest.query.filter_by(code='PM006').first()
+        pm007 = PostmortemTest.query.filter_by(code='PM007').first()
+        pm008 = PostmortemTest.query.filter_by(code='PM008').first()
+        pm009 = PostmortemTest.query.filter_by(code='PM009').first()
+        pm010 = PostmortemTest.query.filter_by(code='PM010').first()
+        pm011 = PostmortemTest.query.filter_by(code='PM011').first()
+        pm012 = PostmortemTest.query.filter_by(code='PM012').first()
+        pm013 = PostmortemTest.query.filter_by(code='PM013').first()
+        pm014 = PostmortemTest.query.filter_by(code='PM014').first()
+        pm015 = PostmortemTest.query.filter_by(code='PM015').first()
+        pm016 = PostmortemTest.query.filter_by(code='PM016').first()
+        pm017 = PostmortemTest.query.filter_by(code='PM017').first()
+        pm018 = PostmortemTest.query.filter_by(code='PM018').first()
+        pm019 = PostmortemTest.query.filter_by(code='PM019').first()
+        pm020 = PostmortemTest.query.filter_by(code='PM020').first()
+        
+        def add_postmortem_tests_if_not_exist(disease, pm_tests_list, disease_name):
+            added = 0
+            for pm_test in pm_tests_list:
+                if pm_test and pm_test not in disease.postmortem_tests.all():
+                    disease.postmortem_tests.append(pm_test)
+                    added += 1
+            if added > 0:
+                print(f"✅ {disease_name} asociado con {added} pruebas post-mortem nuevas")
+            else:
+                print(f"ℹ️  {disease_name} ya tiene todas las pruebas post-mortem")
+        
+        if resp01:  # Resfriado común - no suele tener autopsias
+            pass
+        
+        if resp02:  # Gripe/SDRA
+            add_postmortem_tests_if_not_exist(resp02, [pm005, pm017], "RESP02")
+        
+        if resp03:  # Neumonía
+            add_postmortem_tests_if_not_exist(resp03, [pm001, pm011], "RESP03")
+        
+        if resp04:  # EPOC
+            add_postmortem_tests_if_not_exist(resp04, [pm008], "RESP04")
+        
+        if gastr01:  # Gastroenteritis
+            add_postmortem_tests_if_not_exist(gastr01, [pm007], "GASTR01")
+        
+        if gastr02:  # Gastritis
+            add_postmortem_tests_if_not_exist(gastr02, [pm012, pm015], "GASTR02")
+        
+        if gastr03:  # Apendicitis
+            add_postmortem_tests_if_not_exist(gastr03, [pm003, pm012], "GASTR03")
+        
+        if card01:  # Hipertensión
+            add_postmortem_tests_if_not_exist(card01, [pm006, pm009, pm016, pm020], "CARD01")
+        
+        if card02:  # Insuficiencia cardíaca/IAM
+            add_postmortem_tests_if_not_exist(card02, [pm002, pm013, pm019], "CARD02")
+        
+        if metab01:  # Diabetes
+            add_postmortem_tests_if_not_exist(metab01, [pm004], "METAB01")
+        
+        if metab02:  # Hipotiroidismo
+            add_postmortem_tests_if_not_exist(metab02, [pm014], "METAB02")
+        
+        if infec01:  # ITU
+            add_postmortem_tests_if_not_exist(infec01, [pm010], "INFEC01")
+        
+        if infec02:  # Faringitis/Sepsis
+            add_postmortem_tests_if_not_exist(infec02, [pm018], "INFEC02")
+        
+        db.session.commit()
+        
         # Guardar todos los cambios
         db.session.commit()
         
@@ -1628,8 +2133,10 @@ def create_test_data():
         print(f"   • {len(diseases_data)} Enfermedades")
         print(f"   • {len(symptoms_data)} Síntomas")
         print(f"   • {len(signs_data)} Signos vitales")
-        print(f"   • {len(lab_tests_data)} Pruebas de laboratorio")
+        print(f"   • 20 Pruebas de laboratorio (LAB001-LAB020)")
+        print(f"   • 20 Pruebas post-mortem (PM001-PM020)")
         print(f"   • {len(patients_data)} Pacientes")
+        print(f"   • Asociaciones: Enfermedades ↔ Síntomas/Signos/Lab/Post-mortem")
         print("\n" + "="*60 + "\n")
 
 if __name__ == '__main__':

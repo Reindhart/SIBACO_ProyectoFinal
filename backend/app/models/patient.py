@@ -11,32 +11,19 @@ class Patient(db.Model):
     __tablename__ = 'patients'
     
     id = db.Column(db.Integer, primary_key=True)
-    
-    # Información personal
     first_name = db.Column(db.String(100), nullable=False)
     second_name = db.Column(db.String(100))  # Segundo nombre (opcional)
     paternal_surname = db.Column(db.String(100), nullable=False)  # Apellido paterno
     maternal_surname = db.Column(db.String(100))  # Apellido materno (opcional)
     date_of_birth = db.Column(db.Date, nullable=False)
     gender = db.Column(db.String(20))  # 'male', 'female', 'other'
-    
-    # Tipo de sangre separado en dos componentes
-    # ABO: 0=O, 1=A, 2=B, 3=AB
     blood_type_abo = db.Column(db.Integer)  # 0-3
-    # Rh: 0=negativo, 1=positivo
     blood_type_rh = db.Column(db.Integer)  # 0 o 1
-
-    
-    # Información de contacto
     email = db.Column(db.String(120))
     phone = db.Column(db.String(20))
     address = db.Column(db.Text)
-    
-    # Información médica básica
     allergies = db.Column(db.Text)  # Alergias conocidas
     chronic_conditions = db.Column(db.Text)  # Condiciones crónicas
-    
-    # Relación con el médico asignado
     doctor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     
     # Estado
@@ -45,6 +32,7 @@ class Patient(db.Model):
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    deleted_at = db.Column(db.DateTime, nullable=True)
     
     # Relaciones
     diagnoses = db.relationship('Diagnosis', backref='patient', lazy='dynamic', cascade='all, delete-orphan')
@@ -94,6 +82,7 @@ class Patient(db.Model):
             'is_active': self.is_active,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'deleted_at': self.deleted_at.isoformat() if self.deleted_at else None,
         }
     
     def __repr__(self):

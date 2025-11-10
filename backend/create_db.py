@@ -11,7 +11,6 @@ from app import create_app
 from app.extensions import db
 
 def create_tables():
-    """Crea todas las tablas en la base de datos"""
     app = create_app()
     
     with app.app_context():

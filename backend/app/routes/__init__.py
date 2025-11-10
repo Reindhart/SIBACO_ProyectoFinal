@@ -6,6 +6,8 @@ from .diagnoses import diagnoses_bp
 from .diseases import diseases_bp
 from .symptoms import symptoms_bp
 from .signs import signs_bp
+from .lab_tests import lab_tests_bp
+from .postmortem_tests import postmortem_tests_bp
 
 
 def register_blueprints(app):
@@ -18,3 +20,6 @@ def register_blueprints(app):
     app.register_blueprint(diseases_bp)
     app.register_blueprint(symptoms_bp)
     app.register_blueprint(signs_bp)
+    app.register_blueprint(lab_tests_bp)
+    app.register_blueprint(postmortem_tests_bp)
+

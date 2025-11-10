@@ -27,6 +27,7 @@ class Disease(db.Model):
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    deleted_at = db.Column(db.DateTime, nullable=True)
     
     # Relaciones muchos a muchos
     symptoms = db.relationship('Symptom', secondary='disease_symptoms', backref='diseases', lazy='dynamic')
@@ -49,6 +50,8 @@ class Disease(db.Model):
             'prevention_measures': self.prevention_measures,
             'is_active': self.is_active,
             'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'deleted_at': self.deleted_at.isoformat() if self.deleted_at else None,
         }
         
         if include_relations:
@@ -79,6 +82,7 @@ class Symptom(db.Model):
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    deleted_at = db.Column(db.DateTime, nullable=True)
     
     def to_dict(self):
         """Convierte el síntoma a diccionario"""
@@ -88,6 +92,9 @@ class Symptom(db.Model):
             'description': self.description,
             'category': self.category,
             'is_active': self.is_active,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'deleted_at': self.deleted_at.isoformat() if self.deleted_at else None,
         }
     
     def __repr__(self):
@@ -112,6 +119,7 @@ class Sign(db.Model):
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    deleted_at = db.Column(db.DateTime, nullable=True)
     
     def to_dict(self):
         """Convierte el signo a diccionario"""
@@ -123,6 +131,9 @@ class Sign(db.Model):
             'measurement_unit': self.measurement_unit,
             'normal_range': self.normal_range,
             'is_active': self.is_active,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'deleted_at': self.deleted_at.isoformat() if self.deleted_at else None,
         }
     
     def __repr__(self):
@@ -147,6 +158,7 @@ class LabTest(db.Model):
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    deleted_at = db.Column(db.DateTime, nullable=True)
     
     def to_dict(self):
         """Convierte la prueba de laboratorio a diccionario"""
@@ -158,6 +170,9 @@ class LabTest(db.Model):
             'normal_range': self.normal_range,
             'unit': self.unit,
             'is_active': self.is_active,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'deleted_at': self.deleted_at.isoformat() if self.deleted_at else None,
         }
     
     def __repr__(self):
@@ -165,36 +180,56 @@ class LabTest(db.Model):
 
 
 class PostmortemTest(db.Model):
-    """Modelo de prueba post-mortem"""
+    """Modelo de prueba post-mortem / autopsia
+    
+    Registra hallazgos patológicos y causa oficial de muerte.
+    Utilizado para validar diagnósticos del motor de inferencia.
+    """
     __tablename__ = 'postmortem_tests'
     
-    id = db.Column(db.Integer, primary_key=True)
-    code = db.Column(db.String(20), unique=True, nullable=False, index=True)
-    name = db.Column(db.String(200), nullable=False)
-    description = db.Column(db.Text)
-    category = db.Column(db.String(100))
-    findings_description = db.Column(db.Text)
+    code = db.Column(db.String(20), primary_key=True)  # Código único (ej: PM001, PM002)
+    autopsy_date = db.Column(db.Date)
+    death_cause = db.Column(db.Text, nullable=False)  # Causa oficial de muerte (estándar de oro)
+    disease_diagnosis = db.Column(db.String(20), db.ForeignKey('diseases.code'))  # Enfermedad confirmada
+    macro_findings = db.Column(db.Text)  # Hallazgos macroscópicos visibles (ej: órganos agrandados, placas)
+    histology = db.Column(db.Text)  # Hallazgos microscópicos de histología
+    toxicology_results = db.Column(db.Text)  # Resultados de toxicología (drogas, alcohol, toxinas)
+    genetic_results = db.Column(db.Text)  # Hallazgos genéticos postmortem
+    pathologic_correlation = db.Column(db.Text)  # Evaluación de concordancia diagnóstico clínico vs autopsia
+    observations = db.Column(db.Text)  # Información adicional relevante
     
     # Estado
     is_active = db.Column(db.Boolean, default=True)
-    
+        
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    deleted_at = db.Column(db.DateTime, nullable=True)
+    
+    # Relación con enfermedad confirmada
+    confirmed_disease = db.relationship('Disease', foreign_keys=[disease_diagnosis], backref='postmortem_confirmations')
     
     def to_dict(self):
         """Convierte la prueba post-mortem a diccionario"""
         return {
             'code': self.code,
-            'name': self.name,
-            'description': self.description,
-            'category': self.category,
-            'findings_description': self.findings_description,
+            'autopsy_date': self.autopsy_date.isoformat() if self.autopsy_date else None,
+            'death_cause': self.death_cause,
+            'disease_diagnosis': self.disease_diagnosis,
+            'macro_findings': self.macro_findings,
+            'histology': self.histology,
+            'toxicology_results': self.toxicology_results,
+            'genetic_results': self.genetic_results,
+            'pathologic_correlation': self.pathologic_correlation,
+            'observations': self.observations,
             'is_active': self.is_active,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'deleted_at': self.deleted_at.isoformat() if self.deleted_at else None,
         }
     
     def __repr__(self):
-        return f'<PostmortemTest {self.code}: {self.name}>'
+        return f'<PostmortemTest {self.code}: {self.death_cause}>'
 
 
 # Tablas de asociación muchos a muchos
@@ -223,7 +258,7 @@ disease_lab_tests = db.Table('disease_lab_tests',
 
 disease_postmortem_tests = db.Table('disease_postmortem_tests',
     db.Column('disease_code', db.String(20), db.ForeignKey('diseases.code'), primary_key=True),
-    db.Column('postmortem_test_id', db.Integer, db.ForeignKey('postmortem_tests.id'), primary_key=True),
+    db.Column('postmortem_test_code', db.String(20), db.ForeignKey('postmortem_tests.code'), primary_key=True),
     db.Column('weight', db.Float, default=1.0),  # Peso para el motor de inferencia
     db.Column('created_at', db.DateTime, default=datetime.utcnow)
 )

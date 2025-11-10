@@ -41,16 +41,67 @@ def get_next_code_for_category(category: str) -> str:
 @diseases_bp.route('/diseases', methods=['GET'])
 @jwt_required()
 def get_diseases():
-    """Obtener todas las enfermedades activas"""
+    """Obtener todas las enfermedades activas con paginación y filtrado
+    
+    Query params opcionales:
+    - page: número de página (default: 1)
+    - page_size: tamaño de página (default: 10, max: 1000)
+    - nombre: filtrar por nombre (búsqueda parcial case-insensitive)
+    - categoria: filtrar por categoría (búsqueda parcial case-insensitive)
+    - severidad: filtrar por severidad exacta
+    """
     try:
-        diseases = Disease.query.filter_by(is_active=True).order_by(Disease.code).all()
+        # Parámetros de paginación
+        page = request.args.get('page', 1, type=int)
+        page_size = request.args.get('page_size', 10, type=int)
+        
+        # Validar parámetros
+        if page < 1:
+            page = 1
+        if page_size < 1 or page_size > 1000:
+            page_size = 10
+        
+        # Construir query base
+        query = Disease.query.filter_by(is_active=True)
+        
+        # Filtros opcionales
+        nombre = request.args.get('nombre', '', type=str) or ''
+        categoria = request.args.get('categoria', '', type=str) or ''
+        severidad = request.args.get('severidad', '', type=str) or ''
+        
+        if nombre:
+            query = query.filter(Disease.name.ilike(f'%{nombre}%'))
+        
+        if categoria:
+            query = query.filter(Disease.category.ilike(f'%{categoria}%'))
+        
+        if severidad:
+            query = query.filter(Disease.severity == severidad)
+        
+        # Ordenar por código
+        query = query.order_by(Disease.code)
+        
+        # Obtener total count antes de paginar
+        total_count = query.count()
+        
+        # Aplicar paginación
+        diseases = query.offset((page - 1) * page_size).limit(page_size).all()
         
         diseases_data = []
         for disease in diseases:
             disease_dict = disease.to_dict(include_relations=True)
             diseases_data.append(disease_dict)
         
-        return jsonify({'status': 'success', 'data': diseases_data}), 200
+        return jsonify({
+            'status': 'success',
+            'data': diseases_data,
+            'pagination': {
+                'page': page,
+                'page_size': page_size,
+                'total_count': total_count,
+                'total_pages': (total_count + page_size - 1) // page_size
+            }
+        }), 200
         
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
