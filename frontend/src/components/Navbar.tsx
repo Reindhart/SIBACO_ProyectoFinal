@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { ThemeSelector } from './ThemeSelector'
 import { useAuth } from '@/lib/auth'
-import { ShieldCheck, Menu, LogIn } from 'lucide-react'
+import { ShieldCheck, LogIn, House, Hospital, Users, PersonStanding } from 'lucide-react'
 
 /**
  * Componente de avatar circular con iniciales
@@ -33,37 +33,6 @@ export function Navbar() {
   return (
     <div className="navbar bg-base-200 shadow-lg">
       <div className="navbar-start">
-        <div className="dropdown">
-          <div tabIndex={0} role="button" className="btn btn-ghost lg:hidden">
-            <Menu className="h-5 w-5" />
-          </div>
-          <ul
-            tabIndex={0}
-            className="menu menu-sm dropdown-content mt-3 z-1 p-2 shadow bg-base-100 rounded-box w-52"
-          >
-            <li>
-              <a href="/">Inicio</a>
-            </li>
-            {isAuthenticated && (
-              <>
-                <li>
-                  <Link to="/dashboard">Dashboard</Link>
-                </li>
-                <li>
-                  <Link to="/pacientes/pacientes">Pacientes</Link>
-                </li>
-                <li>
-                  <Link to="/enfermedades/enfermedades">Enfermedades</Link>
-                </li>
-                {user?.role === 'admin' && (
-                  <li>
-                    <Link to="/admin/usuarios/usuarios">Usuarios</Link>
-                  </li>
-                )}
-              </>
-            )}
-          </ul>
-        </div>
         <a href="/" className="btn btn-ghost text-xl">
           <ShieldCheck className="h-6 w-6" />
           <span className="hidden sm:inline">Diagnóstico Médico</span>
@@ -75,17 +44,17 @@ export function Navbar() {
         <div className="navbar-center hidden lg:flex">
           <ul className="menu menu-horizontal px-1">
             <li>
-              <Link to="/dashboard">Inicio</Link>
+              <Link to="/dashboard"><House />Inicio</Link>
             </li>
             <li>
-              <Link to="/pacientes/pacientes">Pacientes</Link>
+              <Link to="/pacientes"><PersonStanding />Pacientes</Link>
             </li>
             <li>
-              <Link to="/enfermedades/enfermedades">Enfermedades</Link>
+              <Link to="/enfermedades"><Hospital />Catálogo Médico</Link>
             </li>
             {user?.role === 'admin' && (
               <li>
-                <Link to="/admin/usuarios/usuarios">Usuarios</Link>
+                <Link to="/admin/usuarios"><Users />Usuarios</Link>
               </li>
             )}
           </ul>
@@ -94,7 +63,6 @@ export function Navbar() {
       
       <div className="navbar-end gap-2">
         <ThemeSelector />
-        
         {isAuthenticated ? (
           <div className="dropdown dropdown-end">
             <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar">

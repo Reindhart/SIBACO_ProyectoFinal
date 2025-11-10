@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Check } from 'lucide-react';
 
 const themes = [
   "light", "dark", "cupcake", "bumblebee", "emerald", "corporate",
@@ -45,17 +46,18 @@ export function ThemeSelector() {
       </div>
       <ul
         tabIndex={0}
-        className="dropdown-content z-[1] p-2 shadow-2xl bg-base-300 rounded-box w-52 max-h-96 overflow-y-auto"
+        className="dropdown-content z-10 p-2 shadow-2xl bg-base-300 rounded-box w-52 max-h-96 overflow-y-auto "
       >
         {themes.map((theme) => (
           <li key={theme}>
             <button
-              className={`btn btn-sm btn-block btn-ghost justify-start ${
+              className={`btn btn-sm btn-block btn-ghost justify-between items-center ${
                 currentTheme === theme ? 'btn-active' : ''
               }`}
               onClick={() => handleThemeChange(theme)}
             >
               {theme}
+              {currentTheme === theme && <Check className="w-6 h-5 stroke-3" color="#1fb843"/>}
             </button>
           </li>
         ))}

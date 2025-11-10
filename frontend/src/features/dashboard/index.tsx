@@ -2,6 +2,7 @@ import { useAuth } from '@/lib/auth'
 import { Link } from '@tanstack/react-router'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Hospital, Users, PersonStanding } from 'lucide-react'
 
 export type Patient = {
   id: string
@@ -23,8 +24,6 @@ export default function Dashboard() {
   const { user } = useAuth()
   const role = user?.role || 'doctor'
 
-  // por ahora solo navegación desde el dashboard hacia páginas dedicadas
-
   return (
     <div className="container mx-auto p-6">
       <h1 className="text-3xl font-bold mb-4">Dashboard</h1>
@@ -33,13 +32,13 @@ export default function Dashboard() {
       {role === 'doctor' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Pacientes</CardTitle>
-            </CardHeader>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><PersonStanding className="h-5 w-5" /> <span>Pacientes</span></CardTitle>
+              </CardHeader>
             <CardContent>
               <p className="mb-4">Administra y consulta los pacientes. Aquí puedes ver el historial y crear diagnósticos.</p>
               <div className="flex gap-2">
-                <Link to="/pacientes/pacientes">
+                <Link to="/pacientes">
                   <Button>Ir a Pacientes</Button>
                 </Link>
               </div>
@@ -48,12 +47,12 @@ export default function Dashboard() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Enfermedades</CardTitle>
+              <CardTitle className="flex items-center gap-2"><Hospital className="h-5 w-5" /> <span>Enfermedades</span></CardTitle>
             </CardHeader>
             <CardContent>
               <p className="mb-4">Consulta y administra el catálogo de enfermedades y sus tratamientos.</p>
               <div>
-                <Link to="/enfermedades/enfermedades">
+                <Link to="/enfermedades">
                   <Button variant="outline">Ir a Enfermedades</Button>
                 </Link>
               </div>
@@ -65,12 +64,12 @@ export default function Dashboard() {
       {role === 'admin' && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Usuarios</CardTitle>
-            </CardHeader>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" /> <span>Usuarios</span></CardTitle>
+              </CardHeader>
             <CardContent>
               <p className="mb-4">Gestiona usuarios del sistema: roles, datos y acceso.</p>
-              <Link to="/admin/usuarios/usuarios">
+              <Link to="/admin/usuarios">
                 <Button>Ir a Usuarios</Button>
               </Link>
             </CardContent>
@@ -78,12 +77,12 @@ export default function Dashboard() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Pacientes</CardTitle>
+              <CardTitle className="flex items-center gap-2"><PersonStanding className="h-5 w-5" /> <span>Pacientes</span></CardTitle>
             </CardHeader>
             <CardContent>
               <p className="mb-4">Administra y consulta los pacientes. Aquí puedes ver el historial y crear diagnósticos.</p>
               <div className="flex gap-2">
-                <Link to="/pacientes/pacientes">
+                <Link to="/pacientes">
                   <Button>Ir a Pacientes</Button>
                 </Link>
               </div>
@@ -92,12 +91,12 @@ export default function Dashboard() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Enfermedades</CardTitle>
+              <CardTitle className="flex items-center gap-2"><Hospital className="h-5 w-5" /> <span>Enfermedades</span></CardTitle>
             </CardHeader>
             <CardContent>
               <p className="mb-4">Consulta y administra el catálogo de enfermedades y sus tratamientos.</p>
               <div>
-                <Link to="/enfermedades/enfermedades">
+                <Link to="/enfermedades">
                   <Button variant="outline">Ir a Enfermedades</Button>
                 </Link>
               </div>

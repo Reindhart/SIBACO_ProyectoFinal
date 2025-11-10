@@ -180,6 +180,15 @@ export default function PatientsTable() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters])
 
+  // Recargar cuando cambie página o tamaño de página (solo si no hay filtros activos)
+  useEffect(() => {
+    const hasFilters = Object.values(filters).some(v => v !== '')
+    if (!hasFilters) {
+      fetchPatients({ page: currentPage, page_size: pageSize })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, pageSize])
+
   // Toggle expansión de fila
   const toggleRow = async (patientId: number) => {
     const newExpanded = new Set(expandedRows)

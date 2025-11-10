@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef } from 'react'
 import { useForm } from 'react-hook-form'
-import { Activity, X, ChevronDown } from 'lucide-react'
+import { Activity, X, ChevronDown, FileText, Tag, Users, Shield } from 'lucide-react'
 import { apiClient } from '@/lib/api'
-import type { Disease } from '@/features/enfermedades/components/enfermedades-table'
+import type { Disease } from '@/features/enfermedades/components/enfermedades-tab'
 
 type Symptom = {
   id: number
@@ -86,8 +86,12 @@ export default function EditDiseaseModal({ disease, onClose, onSave }: EditDisea
     const fetchData = async () => {
       try {
         const [symptomsRes, signsRes] = await Promise.all([
-          apiClient.get<{ status: string; data: Symptom[] }>('/api/symptoms'),
-          apiClient.get<{ status: string; data: Sign[] }>('/api/signs')
+          apiClient.get<{ status: string; data: Symptom[] }>(
+            '/api/symptoms?page=1&page_size=1000'
+          ),
+          apiClient.get<{ status: string; data: Sign[] }>(
+            '/api/signs?page=1&page_size=1000'
+          )
         ])
         setAllSymptoms(symptomsRes.data || [])
         setAllSigns(signsRes.data || [])
@@ -186,115 +190,146 @@ export default function EditDiseaseModal({ disease, onClose, onSave }: EditDisea
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {/* Información básica */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="form-control">
-              <label htmlFor="name" className="label-text mb-2 block">
-                Nombre de la Enfermedad *
-              </label>
-              <input
-                id="name"
-                type="text"
-                className={`input input-bordered w-full ${errors.name ? 'input-error' : ''}`}
-                placeholder="Ej: Gripe, Neumonía, Gastroenteritis"
-                {...register('name', { required: 'El nombre es obligatorio' })}
-              />
-              {errors.name && <span className="text-error text-sm mt-1">{errors.name.message}</span>}
-            </div>
+          {/* Sección 1: Información Básica */}
+          <div className="card bg-base-200">
+            <div className="card-body p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <FileText className="h-5 w-5 text-primary" />
+                <h4 className="font-semibold">Información Básica</h4>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="form-control md:col-span-2">
+                  <fieldset className="m-0">
+                    <legend className="font-medium block mb-1">Nombre de la Enfermedad <span className="text-error">*</span></legend>
+                    <input
+                      id="name"
+                      type="text"
+                      className={`input input-bordered ${errors.name ? 'input-error' : ''}`}
+                      placeholder="Ej: Gripe, Neumonía, Gastroenteritis"
+                      {...register('name', { required: 'El nombre es obligatorio' })}
+                    />
+                    {errors.name && <span className="text-error text-sm mt-1">{errors.name.message}</span>}
+                  </fieldset>
+                </div>
 
-            <div className="form-control">
-              <label htmlFor="category" className="label-text mb-2 block">
-                Tipo de Enfermedad (Categoría) *
-              </label>
-              <select
-                id="category"
-                className={`select select-bordered w-full ${errors.category ? 'select-error' : ''}`}
-                {...register('category', { required: 'La categoría es obligatoria' })}
-              >
-                <option value="">Seleccione una categoría</option>
-                {DISEASE_CATEGORIES.map(cat => (
-                  <option key={cat.value} value={cat.value}>
-                    {cat.label} ({cat.value})
-                  </option>
-                ))}
-              </select>
-              {errors.category && <span className="text-error text-sm mt-1">{errors.category.message}</span>}
-            </div>
-
-            <div className="form-control">
-              <label htmlFor="severity" className="label-text mb-2 block">
-                Severidad *
-              </label>
-              <select
-                id="severity"
-                className="select select-bordered w-full"
-                {...register('severity', { required: 'La severidad es obligatoria' })}
-              >
-                <option value="leve">Leve</option>
-                <option value="moderada">Moderada</option>
-                <option value="grave">Grave</option>
-                <option value="crítica">Crítica</option>
-              </select>
+                <div className="form-control md:col-span-2">
+                  <fieldset className="m-0">
+                    <legend className="font-medium block mb-1">Descripción</legend>
+                    <textarea
+                      id="description"
+                      className="textarea textarea-bordered h-24"
+                      placeholder="Descripción detallada de la enfermedad, causas, manifestaciones clínicas..."
+                      {...register('description')}
+                    />
+                  </fieldset>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Descripción */}
-          <div className="form-control">
-            <label htmlFor="description" className="label-text mb-2 block">
-              Descripción
-            </label>
-            <textarea
-              id="description"
-              className="textarea textarea-bordered w-full h-24"
-              placeholder="Descripción detallada de la enfermedad, causas, manifestaciones clínicas..."
-              {...register('description')}
-            />
+          {/* Sección 2: Clasificación */}
+          <div className="card bg-base-200">
+            <div className="card-body p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Tag className="h-5 w-5 text-primary" />
+                <h4 className="font-semibold">Clasificación</h4>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="form-control">
+                  <fieldset className="m-0">
+                    <legend className="font-medium block mb-1">Tipo de Enfermedad (Categoría) *</legend>
+                    <select
+                      id="category"
+                      className={`select select-bordered ${errors.category ? 'select-error' : ''}`}
+                      {...register('category', { required: 'La categoría es obligatoria' })}
+                    >
+                      <option value="">Seleccione una categoría</option>
+                      {DISEASE_CATEGORIES.map(cat => (
+                        <option key={cat.value} value={cat.value}>
+                          {cat.label} ({cat.value})
+                        </option>
+                      ))}
+                    </select>
+                    {errors.category && <span className="text-error text-sm mt-1">{errors.category.message}</span>}
+                  </fieldset>
+                </div>
+
+                <div className="form-control">
+                  <fieldset className="m-0">
+                    <legend className="font-medium block mb-1">Severidad *</legend>
+                    <select
+                      id="severity"
+                      className="select select-bordered"
+                      {...register('severity', { required: 'La severidad es obligatoria' })}
+                    >
+                      <option value="leve">Leve</option>
+                      <option value="moderada">Moderada</option>
+                      <option value="grave">Grave</option>
+                      <option value="crítica">Crítica</option>
+                    </select>
+                  </fieldset>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="divider">Información Clínica</div>
+          {/* Sección 3: Tratamiento y Prevención */}
+          <div className="card bg-base-200">
+            <div className="card-body p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Shield className="h-5 w-5 text-primary" />
+                <h4 className="font-semibold">Tratamiento y Prevención</h4>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="form-control">
+                  <fieldset className="m-0">
+                    <legend className="font-medium block mb-1">Tratamientos Recomendados</legend>
+                    <p className="text-sm text-base-content/70 mb-2">Ingrese cada tratamiento en una línea separada (se mostrará como lista)</p>
+                    <textarea
+                      id="treatment_recommendations"
+                      className="textarea textarea-bordered h-32"
+                      placeholder={'Ej:\nReposo absoluto por 7 días\nParacetamol 500mg cada 8 horas'}
+                      {...register('treatment_recommendations')}
+                    />
+                  </fieldset>
+                </div>
 
-          {/* Tratamientos */}
-          <div className="form-control">
-            <label htmlFor="treatment_recommendations" className="label-text mb-2 block">
-              Tratamientos Recomendados
-            </label>
-            <span className="text-xs text-base-content/70 mb-2 block">
-              Ingrese cada tratamiento en una línea separada (se mostrará como lista)
-            </span>
-            <textarea
-              id="treatment_recommendations"
-              className="textarea textarea-bordered w-full h-32"
-              placeholder={'Ej:\nReposo absoluto por 7 días\nParacetamol 500mg cada 8 horas'}
-              {...register('treatment_recommendations')}
-            />
+                <div className="form-control">
+                  <fieldset className="m-0">
+                    <legend className="font-medium block mb-1">Medidas de Prevención</legend>
+                    <p className="text-sm text-base-content/70 mb-2">Ingrese cada medida en una línea separada (se mostrará como lista)</p>
+                    <textarea
+                      id="prevention_measures"
+                      className="textarea textarea-bordered h-32"
+                      placeholder={'Ej:\nLavado frecuente de manos\nVacunación anual'}
+                      {...register('prevention_measures')}
+                    />
+                  </fieldset>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Medidas de prevención */}
-          <div className="form-control">
-            <label htmlFor="prevention_measures" className="label-text mb-2 block">
-              Medidas de Prevención
-            </label>
-            <span className="text-xs text-base-content/70 mb-2 block">
-              Ingrese cada medida en una línea separada (se mostrará como lista)
-            </span>
-            <textarea
-              id="prevention_measures"
-              className="textarea textarea-bordered w-full h-32"
-              placeholder={'Ej:\nLavado frecuente de manos\nVacunación anual'}
-              {...register('prevention_measures')}
-            />
-          </div>
-
-          <div className="divider">Síntomas y Signos</div>
+          {/* Sección 4: Síntomas y Signos */}
+          <div className="card bg-base-200">
+            <div className="card-body p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Users className="h-5 w-5 text-primary" />
+                <h4 className="font-semibold">Síntomas y Signos</h4>
+              </div>
 
           {/* Selector de Síntomas y Signos con Combobox */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Selector de Síntomas con Combobox */}
             <div className="form-control" ref={symptomDropdownRef}>
-              <label className="label-text mb-2 block font-semibold">Síntomas</label>
-              
-              {/* Combobox input */}
-              <div className="relative">
+              <fieldset className="m-0">
+                <legend className="font-semibold mb-1">Síntomas</legend>
+
+                {/* Combobox input */}
+                <div className="relative">
                 <input
                   type="text"
                   placeholder="Buscar síntoma..."
@@ -354,31 +389,33 @@ export default function EditDiseaseModal({ disease, onClose, onSave }: EditDisea
                 )}
               </div>
 
-              {/* Selected symptoms */}
-              {selectedSymptoms.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {selectedSymptoms.map(symptom => (
-                    <div key={symptom.id} className="badge badge-primary gap-2">
-                      {symptom.name}
-                      <button
-                        type="button"
-                        onClick={() => removeSymptom(symptom.id)}
-                        className="btn btn-ghost btn-xs btn-circle"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+                {/* Selected symptoms */}
+                {selectedSymptoms.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {selectedSymptoms.map(symptom => (
+                      <div key={symptom.id} className="badge badge-primary gap-2">
+                        {symptom.name}
+                        <button
+                          type="button"
+                          onClick={() => removeSymptom(symptom.id)}
+                          className="btn btn-ghost btn-xs btn-circle"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </fieldset>
             </div>
 
             {/* Selector de Signos con Combobox */}
             <div className="form-control" ref={signDropdownRef}>
-              <label className="label-text mb-2 block font-semibold">Signos Clínicos</label>
-              
-              {/* Combobox input */}
-              <div className="relative">
+              <fieldset className="m-0">
+                <legend className="font-semibold mb-1">Signos Clínicos</legend>
+
+                {/* Combobox input */}
+                <div className="relative">
                 <input
                   type="text"
                   placeholder="Buscar signo..."
@@ -438,23 +475,26 @@ export default function EditDiseaseModal({ disease, onClose, onSave }: EditDisea
                 )}
               </div>
 
-              {/* Selected signs */}
-              {selectedSigns.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {selectedSigns.map(sign => (
-                    <div key={sign.id} className="badge badge-secondary gap-2">
-                      {sign.name}
-                      <button
-                        type="button"
-                        onClick={() => removeSign(sign.id)}
-                        className="btn btn-ghost btn-xs btn-circle"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+                {/* Selected signs */}
+                {selectedSigns.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {selectedSigns.map(sign => (
+                      <div key={sign.id} className="badge badge-secondary gap-2">
+                        {sign.name}
+                        <button
+                          type="button"
+                          onClick={() => removeSign(sign.id)}
+                          className="btn btn-ghost btn-xs btn-circle"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </fieldset>
+            </div>
+          </div>
             </div>
           </div>
 
