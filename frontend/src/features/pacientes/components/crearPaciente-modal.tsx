@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { X, Calendar } from 'lucide-react'
 import DatePicker from 'react-datepicker'
@@ -13,6 +12,12 @@ type PatientFormData = {
   date_of_birth: string
   gender: string
   blood_type?: string
+  blood_type_abo?: number
+  blood_type_rh?: number
+  height?: number
+  weight?: number
+  smoking_status?: string
+  alcohol_consumption?: string
   email?: string
   phone?: string
   address?: string
@@ -26,12 +31,11 @@ type CreatePatientModalProps = {
 }
 
 export default function CreatePatientModal({ onClose, onSave }: CreatePatientModalProps) {
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
-
   const {
     register,
     handleSubmit,
     control,
+    setValue,
     formState: { errors, isSubmitting }
   } = useForm<PatientFormData>({
     defaultValues: {
@@ -42,6 +46,12 @@ export default function CreatePatientModal({ onClose, onSave }: CreatePatientMod
       date_of_birth: '',
       gender: '',
       blood_type: '',
+  blood_type_abo: undefined,
+  blood_type_rh: undefined,
+      height: undefined,
+      weight: undefined,
+      smoking_status: '',
+      alcohol_consumption: '',
       email: '',
       phone: '',
       address: '',
@@ -52,13 +62,50 @@ export default function CreatePatientModal({ onClose, onSave }: CreatePatientMod
 
   const onSubmit = async (data: PatientFormData) => {
     try {
-      await apiClient.post('/api/patients', data)
+      // Enviar ABO y RH por separado según el modelo del servidor
+      const payload = { ...data }
+      if (!payload.blood_type_abo && payload.blood_type) {
+        const map = mapBloodStringToCodes(payload.blood_type)
+        payload.blood_type_abo = map.abo
+        payload.blood_type_rh = map.rh
+      }
+      // Eliminar el campo combinado para evitar confusión
+      delete payload.blood_type
+      await apiClient.post('/api/patients', payload)
       onSave()
     } catch (error: any) {
       console.error('Error saving patient:', error)
       alert(error.message || 'Error al guardar el paciente')
     }
   }
+
+  // Mapeo helper: convierte 'A+' -> { abo: 1, rh: 1 } (asumimos mapping ABO: A=1,B=2,AB=3,O=0)
+  // NOTA: Asumo la siguiente codificación en el backend: O=0, A=1, B=2, AB=3; Rh: + => 1, - => 0
+  const mapBloodStringToCodes = (bt: string | undefined) => {
+    if (!bt) return { abo: undefined, rh: undefined }
+    const match = bt.match(/^((A|B|AB|O))(\+|-)$/)
+    if (!match) return { abo: undefined, rh: undefined }
+    const aboStr = match[1]
+    const rh = match[3] === '+' ? 1 : 0
+    let abo: number | undefined = undefined
+    switch (aboStr) {
+      case 'O':
+        abo = 0
+        break
+      case 'A':
+        abo = 1
+        break
+      case 'B':
+        abo = 2
+        break
+      case 'AB':
+        abo = 3
+        break
+    }
+    return { abo, rh }
+  }
+
+  // mapCodesToBloodString removed (no usado en creación)
 
   return (
     <div className="modal modal-open">
@@ -143,7 +190,6 @@ export default function CreatePatientModal({ onClose, onSave }: CreatePatientMod
                         if (date) {
                           const isoDate = date.toISOString().split('T')[0]
                           field.onChange(isoDate)
-                          setSelectedDate(date)
                         }
                       }}
                       maxDate={new Date()}
@@ -188,7 +234,18 @@ export default function CreatePatientModal({ onClose, onSave }: CreatePatientMod
               <label htmlFor="blood_type" className="label-text mb-2 block">
                 Tipo de Sangre
               </label>
-              <select id="blood_type" className="select select-bordered w-full" {...register('blood_type')}>
+              <select
+                id="blood_type"
+                className="select select-bordered w-full"
+                {...register('blood_type', {
+                  onChange: (e) => {
+                    const val = (e.target as HTMLSelectElement).value
+                    const map = mapBloodStringToCodes(val)
+                    setValue('blood_type_abo', map.abo)
+                    setValue('blood_type_rh', map.rh)
+                  }
+                })}
+              >
                 <option value="">Seleccionar...</option>
                 <option value="A+">A+</option>
                 <option value="A-">A-</option>
@@ -209,7 +266,86 @@ export default function CreatePatientModal({ onClose, onSave }: CreatePatientMod
             </div>
           </div>
 
+          {/* Datos antropométricos y hábitos */}
+          <div className="divider">Datos Antropométricos y Hábitos</div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="form-control">
+              <label htmlFor="height" className="label-text mb-2 block">
+                Altura (cm)
+              </label>
+              <input
+                id="height"
+                type="number"
+                step="0.1"
+                min="0"
+                max="300"
+                placeholder="Ej: 175.5"
+                className="input input-bordered w-full"
+                {...register('height', {
+                  valueAsNumber: true,
+                  min: { value: 0, message: 'La altura debe ser positiva' },
+                  max: { value: 300, message: 'Altura no válida' }
+                })}
+              />
+              {errors.height && (
+                <span className="text-error text-sm mt-1">{errors.height.message}</span>
+              )}
+            </div>
+
+            <div className="form-control">
+              <label htmlFor="weight" className="label-text mb-2 block">
+                Peso (kg)
+              </label>
+              <input
+                id="weight"
+                type="number"
+                step="0.1"
+                min="0"
+                max="500"
+                placeholder="Ej: 70.5"
+                className="input input-bordered w-full"
+                {...register('weight', {
+                  valueAsNumber: true,
+                  min: { value: 0, message: 'El peso debe ser positivo' },
+                  max: { value: 500, message: 'Peso no válido' }
+                })}
+              />
+              {errors.weight && (
+                <span className="text-error text-sm mt-1">{errors.weight.message}</span>
+              )}
+            </div>
+
+            <div className="form-control cursor-pointer">
+              <label htmlFor="smoking_status" className="label-text mb-2 block">
+                Estado de Fumador
+              </label>
+              <select id="smoking_status" className="select select-bordered w-full" {...register('smoking_status')}>
+                <option value="">Seleccionar...</option>
+                <option value="nunca">Nunca ha fumado</option>
+                <option value="ex-fumador">Ex-fumador</option>
+                <option value="fumador">Fumador activo</option>
+                <option value="ocasional">Fumador ocasional</option>
+              </select>
+            </div>
+
+            <div className="form-control cursor-pointer">
+              <label htmlFor="alcohol_consumption" className="label-text mb-2 block">
+                Consumo de Alcohol
+              </label>
+              <select id="alcohol_consumption" className="select select-bordered w-full" {...register('alcohol_consumption')}>
+                <option value="">Seleccionar...</option>
+                <option value="nunca">Nunca</option>
+                <option value="ocasional">Ocasional</option>
+                <option value="moderado">Moderado</option>
+                <option value="frecuente">Frecuente</option>
+              </select>
+            </div>
+          </div>
+
           {/* Información de contacto */}
+          <div className="divider">Información de Contacto</div>
+
           <div className="form-control">
             <label htmlFor="email" className="label-text mb-2 block">
               Email

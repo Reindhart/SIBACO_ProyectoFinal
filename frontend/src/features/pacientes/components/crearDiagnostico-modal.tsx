@@ -138,26 +138,16 @@ export default function DiagnosisModal({ patient, onClose, onSave }: DiagnosisMo
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // usar los mismos params que otros modales (page=1&page_size=1000)
-        const [symptomsRes, signsRes, labTestsRes] = await Promise.all([
-          apiClient.get('/api/symptoms?page=1&page_size=1000'),
-          apiClient.get('/api/signs?page=1&page_size=1000'),
-          apiClient.get('/api/lab-tests?page=1&page_size=1000')
+        // Cargar síntomas, signos y pruebas de laboratorio
+        const [symptoms, signs, labTests] = await Promise.all([
+          apiClient.get<{ data: Symptom[] }>('/api/symptoms?page=1&page_size=1000'),
+          apiClient.get<{ data: Sign[] }>('/api/signs?page=1&page_size=1000'),
+          apiClient.get<{ data: LabTest[] }>('/api/lab-tests?page=1&page_size=1000')
         ])
 
-        // Normalizar diferentes shapes de respuesta: { data: [...] } o { data: { data: [...] } }
-        const normalize = (res: any) => {
-          if (!res) return []
-          if (Array.isArray(res.data)) return res.data
-          if (res.data && Array.isArray(res.data.data)) return res.data.data
-          // fallback: si el endpoint retorna directamente el array
-          if (Array.isArray(res)) return res
-          return []
-        }
-
-        setSymptoms(normalize(symptomsRes))
-        setSigns(normalize(signsRes))
-        setLabTests(normalize(labTestsRes))
+        setSymptoms(symptoms.data || [])
+        setSigns(signs.data || [])
+        setLabTests(labTests.data || [])
       } catch (error) {
         console.error('Error fetching data:', error)
       }
@@ -280,26 +270,64 @@ export default function DiagnosisModal({ patient, onClose, onSave }: DiagnosisMo
         return
       }
 
-      // Construir el payload estructurado
-      const symptomsText = selectedSymptoms.map(s => `${s.name} (${s.code})`).join(', ')
-      const signsText = selectedSigns.map(s => `${s.name}: ${s.value} ${s.unit}`).join(', ')
-      const labResultsText = selectedLabTests.length > 0
-        ? selectedLabTests.map(t => `${t.name}: ${t.value} ${t.unit}`).join(', ')
-        : undefined
-
+      // Construir el payload estructurado para el motor de inferencia
       const payload = {
         patient_id: patient.id,
-        symptoms_presented: symptomsText,
-        signs_observed: signsText,
-        lab_results: labResultsText,
+        symptoms: selectedSymptoms.map(s => ({
+          symptom_id: s.id,
+          note: undefined
+        })),
+        signs: selectedSigns.map(s => {
+          // Intentar parsear como número
+          const numericValue = parseFloat(s.value)
+          return {
+            sign_id: s.id,
+            value_numeric: !isNaN(numericValue) ? numericValue : undefined,
+            value_text: isNaN(numericValue) ? s.value : undefined,
+            unit: s.unit || undefined,
+            note: undefined
+          }
+        }),
+        lab_results: selectedLabTests.length > 0 ? selectedLabTests.map(t => {
+          // Intentar parsear como número
+          const numericValue = parseFloat(t.value)
+          return {
+            lab_test_id: t.id,
+            value_numeric: !isNaN(numericValue) ? numericValue : undefined,
+            value_text: isNaN(numericValue) ? t.value : undefined,
+            unit: t.unit || undefined,
+            note: undefined
+          }
+        }) : undefined,
         notes: data.notes || undefined
       }
       
-      await apiClient.post('/api/diagnoses', payload)
+      // Usar apiClient.post correctamente (endpoint: string, data: unknown)
+      const responseData = await apiClient.post<{ data: any }>('/api/diagnoses', payload)
+      
+      // Mostrar resultado del diagnóstico
+      if (responseData?.data) {
+        const result = responseData.data
+        const message = `✅ Diagnóstico creado exitosamente\n\n` +
+          `🏥 Enfermedad: ${result.disease_name} (${result.disease_code})\n` +
+          `📊 Confianza: ${result.confidence_score}%\n\n` +
+          `💊 Tratamiento:\n${result.treatment}\n\n` +
+          (result.alternative_diagnoses?.length > 0 
+            ? `🔄 Diagnósticos alternativos:\n${result.alternative_diagnoses.map((alt: any, i: number) => 
+                `${i + 1}. ${alt.disease_name} (${alt.confidence}%)`
+              ).join('\n')}`
+            : '')
+        
+        alert(message)
+      }
+      
       onSave()
     } catch (error: any) {
       console.error('Error creating diagnosis:', error)
-      alert(error.message || 'Error al crear el diagnóstico')
+      
+      // El error ya viene procesado por apiClient.request()
+      const errorMessage = error.message || 'Error al crear el diagnóstico'
+      alert(errorMessage)
     }
   }
 

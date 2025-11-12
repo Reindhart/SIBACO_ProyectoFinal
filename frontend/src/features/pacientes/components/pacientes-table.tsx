@@ -1,10 +1,11 @@
 import { Fragment, useState, useEffect, useRef } from 'react'
-import { UserPlus, FileText, Stethoscope, ChevronDown, ChevronRight, Filter, FunnelX, X, Edit } from 'lucide-react'
+import { UserPlus, FileText, Stethoscope, ChevronDown, ChevronRight, Filter, FunnelX, X, Edit, ClipboardList } from 'lucide-react'
 import { apiClient } from '@/lib/api'
 import CreatePatientModal from './crearPaciente-modal'
 import EditPatientModal from './editarPaciente-modal'
 import DiagnosisModal from './crearDiagnostico-modal'
 import DiagnosisDetailModal from './verDiagnostico-modal'
+import HistorialClinicoModal from './verHistorialClinico-modal'
 
 export type Patient = {
   id: number
@@ -17,6 +18,11 @@ export type Patient = {
   date_of_birth: string
   gender: string
   blood_type?: string
+  height?: number
+  weight?: number
+  bmi?: number
+  smoking_status?: string
+  alcohol_consumption?: string
   email?: string
   phone?: string
   address?: string
@@ -79,6 +85,8 @@ export default function PatientsTable() {
   const [selectedPatientForDiagnosis, setSelectedPatientForDiagnosis] = useState<Patient | null>(null)
   const [isDiagnosisDetailModalOpen, setIsDiagnosisDetailModalOpen] = useState(false)
   const [selectedDiagnosis, setSelectedDiagnosis] = useState<Diagnosis | null>(null)
+  const [isHistorialModalOpen, setIsHistorialModalOpen] = useState(false)
+  const [selectedPatientForHistorial, setSelectedPatientForHistorial] = useState<Patient | null>(null)
   
   // Estados de filtros
   const [showFilters, setShowFilters] = useState(false)
@@ -269,6 +277,16 @@ export default function PatientsTable() {
   const handleViewDiagnosisDetail = (diagnosis: Diagnosis) => {
     setSelectedDiagnosis(diagnosis)
     setIsDiagnosisDetailModalOpen(true)
+  }
+
+  const handleViewHistorialClinico = (patient: Patient) => {
+    setSelectedPatientForHistorial(patient)
+    setIsHistorialModalOpen(true)
+  }
+
+  const handleCloseHistorialModal = () => {
+    setIsHistorialModalOpen(false)
+    setSelectedPatientForHistorial(null)
   }
 
   const handleCloseDiagnosisDetailModal = () => {
@@ -515,6 +533,13 @@ export default function PatientsTable() {
                           </button>
                           <button
                             className="btn btn-ghost btn-circle btn-sm"
+                            onClick={(e) => { e.stopPropagation(); handleViewHistorialClinico(patient); }}
+                            title="Ver historial clínico completo"
+                          >
+                            <ClipboardList className="h-4 w-4" />
+                          </button>
+                          <button
+                            className="btn btn-ghost btn-circle btn-sm"
                             onClick={(e) => { e.stopPropagation(); handleViewLastDiagnosis(patient); }}
                             title="Ver último diagnóstico"
                             disabled={diseases.length === 0}
@@ -676,6 +701,22 @@ export default function PatientsTable() {
         <DiagnosisDetailModal
           diagnosis={selectedDiagnosis}
           onClose={handleCloseDiagnosisDetailModal}
+        />
+      )}
+
+      {isHistorialModalOpen && selectedPatientForHistorial && (
+        <HistorialClinicoModal
+          patient={selectedPatientForHistorial}
+          onClose={handleCloseHistorialModal}
+          onViewDiagnosis={(diagnosisId) => {
+            // Buscar el diagnóstico por ID y abrir el modal de detalle
+            const allDiagnoses = Object.values(diagnoses).flat()
+            const diagnosis = allDiagnoses.find(d => d.id === diagnosisId)
+            if (diagnosis) {
+              setSelectedDiagnosis(diagnosis)
+              setIsDiagnosisDetailModalOpen(true)
+            }
+          }}
         />
       )}
     </div>

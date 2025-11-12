@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { X, Calendar } from 'lucide-react'
 import DatePicker from 'react-datepicker'
@@ -14,6 +14,12 @@ type PatientFormData = {
   date_of_birth: string
   gender: string
   blood_type?: string
+  blood_type_abo?: number
+  blood_type_rh?: number
+  height?: number
+  weight?: number
+  smoking_status?: string
+  alcohol_consumption?: string
   email?: string
   phone?: string
   address?: string
@@ -28,14 +34,36 @@ type EditPatientModalProps = {
 }
 
 export default function EditPatientModal({ patient, onClose, onSave }: EditPatientModalProps) {
-  const [selectedDate, setSelectedDate] = useState<Date | null>(
-    patient?.date_of_birth ? new Date(patient.date_of_birth) : null
-  )
+  // helper: mapa de string a códigos (O=0,A=1,B=2,AB=3; Rh + =1, - =0)
+  const mapBloodStringToCodes = (bt: string | undefined) => {
+    if (!bt) return { abo: undefined, rh: undefined }
+    const match = bt.match(/^((A|B|AB|O))(\+|-)$/)
+    if (!match) return { abo: undefined, rh: undefined }
+    const aboStr = match[1]
+    const rh = match[3] === '+' ? 1 : 0
+    let abo: number | undefined = undefined
+    switch (aboStr) {
+      case 'O':
+        abo = 0
+        break
+      case 'A':
+        abo = 1
+        break
+      case 'B':
+        abo = 2
+        break
+      case 'AB':
+        abo = 3
+        break
+    }
+    return { abo, rh }
+  }
 
   const {
     register,
     handleSubmit,
     control,
+    setValue,
     formState: { errors, isSubmitting },
     reset
   } = useForm<PatientFormData>({
@@ -47,6 +75,10 @@ export default function EditPatientModal({ patient, onClose, onSave }: EditPatie
       date_of_birth: patient.date_of_birth,
       gender: patient.gender,
       blood_type: patient.blood_type || '',
+      height: patient.height || undefined,
+      weight: patient.weight || undefined,
+      smoking_status: patient.smoking_status || '',
+      alcohol_consumption: patient.alcohol_consumption || '',
       email: patient.email || '',
       phone: patient.phone || '',
       address: patient.address || '',
@@ -64,20 +96,28 @@ export default function EditPatientModal({ patient, onClose, onSave }: EditPatie
       date_of_birth: patient.date_of_birth,
       gender: patient.gender,
       blood_type: patient.blood_type || '',
+      height: patient.height || undefined,
+      weight: patient.weight || undefined,
+      smoking_status: patient.smoking_status || '',
+      alcohol_consumption: patient.alcohol_consumption || '',
       email: patient.email || '',
       phone: patient.phone || '',
       address: patient.address || '',
       allergies: patient.allergies || '',
       chronic_conditions: patient.chronic_conditions || ''
     })
-    if (patient.date_of_birth) {
-      setSelectedDate(new Date(patient.date_of_birth))
-    }
   }, [patient, reset])
 
   const onSubmit = async (data: PatientFormData) => {
     try {
-      await apiClient.put(`/api/patients/${patient.id}`, data)
+      const payload: any = { ...data }
+      if (!payload.blood_type_abo && payload.blood_type) {
+        const map = mapBloodStringToCodes(payload.blood_type)
+        payload.blood_type_abo = map.abo
+        payload.blood_type_rh = map.rh
+      }
+      delete payload.blood_type
+      await apiClient.put(`/api/patients/${patient.id}`, payload)
       onSave()
     } catch (error: any) {
       console.error('Error saving patient:', error)
@@ -171,7 +211,6 @@ export default function EditPatientModal({ patient, onClose, onSave }: EditPatie
                         if (date) {
                           const isoDate = date.toISOString().split('T')[0]
                           field.onChange(isoDate)
-                          setSelectedDate(date)
                         }
                       }}
                       maxDate={new Date()}
@@ -216,7 +255,18 @@ export default function EditPatientModal({ patient, onClose, onSave }: EditPatie
               <label htmlFor="blood_type" className="label-text mb-2 block">
                 Tipo de Sangre
               </label>
-              <select id="blood_type" className="select select-bordered w-full" {...register('blood_type')}>
+              <select
+                id="blood_type"
+                className="select select-bordered w-full"
+                {...register('blood_type', {
+                  onChange: (e) => {
+                    const val = (e.target as HTMLSelectElement).value
+                    const map = mapBloodStringToCodes(val)
+                    setValue('blood_type_abo', map.abo)
+                    setValue('blood_type_rh', map.rh)
+                  }
+                })}
+              >
                 <option value="">Seleccionar...</option>
                 <option value="A+">A+</option>
                 <option value="A-">A-</option>
@@ -237,7 +287,86 @@ export default function EditPatientModal({ patient, onClose, onSave }: EditPatie
             </div>
           </div>
 
+          {/* Datos antropométricos y hábitos */}
+          <div className="divider">Datos Antropométricos y Hábitos</div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="form-control">
+              <label htmlFor="height" className="label-text mb-2 block">
+                Altura (cm)
+              </label>
+              <input
+                id="height"
+                type="number"
+                step="0.1"
+                min="0"
+                max="300"
+                placeholder="Ej: 175.5"
+                className="input input-bordered w-full"
+                {...register('height', {
+                  valueAsNumber: true,
+                  min: { value: 0, message: 'La altura debe ser positiva' },
+                  max: { value: 300, message: 'Altura no válida' }
+                })}
+              />
+              {errors.height && (
+                <span className="text-error text-sm mt-1">{errors.height.message}</span>
+              )}
+            </div>
+
+            <div className="form-control">
+              <label htmlFor="weight" className="label-text mb-2 block">
+                Peso (kg)
+              </label>
+              <input
+                id="weight"
+                type="number"
+                step="0.1"
+                min="0"
+                max="500"
+                placeholder="Ej: 70.5"
+                className="input input-bordered w-full"
+                {...register('weight', {
+                  valueAsNumber: true,
+                  min: { value: 0, message: 'El peso debe ser positivo' },
+                  max: { value: 500, message: 'Peso no válido' }
+                })}
+              />
+              {errors.weight && (
+                <span className="text-error text-sm mt-1">{errors.weight.message}</span>
+              )}
+            </div>
+
+            <div className="form-control cursor-pointer">
+              <label htmlFor="smoking_status" className="label-text mb-2 block">
+                Estado de Fumador
+              </label>
+              <select id="smoking_status" className="select select-bordered w-full" {...register('smoking_status')}>
+                <option value="">Seleccionar...</option>
+                <option value="nunca">Nunca ha fumado</option>
+                <option value="ex-fumador">Ex-fumador</option>
+                <option value="fumador">Fumador activo</option>
+                <option value="ocasional">Fumador ocasional</option>
+              </select>
+            </div>
+
+            <div className="form-control cursor-pointer">
+              <label htmlFor="alcohol_consumption" className="label-text mb-2 block">
+                Consumo de Alcohol
+              </label>
+              <select id="alcohol_consumption" className="select select-bordered w-full" {...register('alcohol_consumption')}>
+                <option value="">Seleccionar...</option>
+                <option value="nunca">Nunca</option>
+                <option value="ocasional">Ocasional</option>
+                <option value="moderado">Moderado</option>
+                <option value="frecuente">Frecuente</option>
+              </select>
+            </div>
+          </div>
+
           {/* Información de contacto */}
+          <div className="divider">Información de Contacto</div>
+
           <div className="form-control">
             <label htmlFor="email" className="label-text mb-2 block">
               Email
