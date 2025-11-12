@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import apiClient from '@/api/fetchApi'
+import { apiClient } from '@/lib/api'
 
 type Patient = {
   id: number
@@ -112,34 +112,16 @@ export default function HistorialClinicoModal({
     const fetchDiagnoses = async () => {
       try {
         setLoading(true)
-        const response = await apiClient.get({
-          url: `/api/patients/${patient.id}/diagnoses`
-        })
+        const response = await apiClient.get<{ status: string; data: Diagnosis[] }>(
+          `/api/patients/${patient.id}/diagnoses`
+        )
         
-        // Parsear respuesta JSON
-        const responseData = await response.json()
-        
-        // Normalizar respuesta
-        const data = responseData?.data || responseData || []
-        setDiagnoses(Array.isArray(data) ? data : [])
+        // La respuesta ya viene parseada por apiClient
+        setDiagnoses(response.data || [])
         setError(null)
       } catch (err: any) {
         console.error('Error fetching diagnoses:', err)
-        
-        // Intentar obtener mensaje de error
-        let errorMessage = 'Error al cargar historial clínico'
-        try {
-          if (err instanceof Response) {
-            const errorData = await err.json()
-            errorMessage = errorData.message || errorMessage
-          } else if (err.message) {
-            errorMessage = err.message
-          }
-        } catch (parseError) {
-          // Si falla el parseo, usar el mensaje por defecto
-        }
-        
-        setError(errorMessage)
+        setError(err.message || 'Error al cargar historial clínico')
       } finally {
         setLoading(false)
       }
