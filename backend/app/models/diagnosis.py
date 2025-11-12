@@ -15,9 +15,8 @@ class Diagnosis(db.Model):
     doctor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     disease_code = db.Column(db.String(20), db.ForeignKey('diseases.code'), nullable=False)
     diagnosis_date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    symptoms_presented = db.Column(db.Text)  # JSON string con los síntomas
-    signs_observed = db.Column(db.Text)  # JSON string con los signos y valores medidos
-    lab_results = db.Column(db.Text)  # JSON string con resultados de laboratorio y valores obtenidos
+    # Agrupador opcional para los logs de una visita/consulta
+    visit_id = db.Column(db.String(64), nullable=True, index=True)
     confidence_score = db.Column(db.Float)  # Nivel de confianza del diagnóstico (0-100)
     inference_details = db.Column(db.Text)  # JSON string con detalles del proceso de inferencia
     alternative_diseases = db.Column(db.Text)  # JSON string con enfermedades alternativas y sus scores
@@ -37,6 +36,11 @@ class Diagnosis(db.Model):
     
     # Relación con seguimientos
     follow_ups = db.relationship('FollowUp', backref='diagnosis', lazy='dynamic', cascade='all, delete-orphan')
+
+    # Logs atómicos relacionados a este diagnóstico (registrados durante la visita)
+    symptoms_logs = db.relationship('PatientSymptomsLog', backref='diagnosis', lazy='dynamic')
+    signs_logs = db.relationship('PatientSignsLog', backref='diagnosis', lazy='dynamic')
+    lab_results_logs = db.relationship('PatientLabResultsLog', backref='diagnosis', lazy='dynamic')
     
     def to_dict(self, include_relations=False):
         """Convierte el diagnóstico a diccionario"""
@@ -46,9 +50,7 @@ class Diagnosis(db.Model):
             'doctor_id': self.doctor_id,
             'disease_code': self.disease_code,
             'diagnosis_date': self.diagnosis_date.isoformat() if self.diagnosis_date else None,
-            'symptoms_presented': self.symptoms_presented,
-            'signs_observed': self.signs_observed,
-            'lab_results': self.lab_results,
+            'visit_id': self.visit_id,
             'confidence_score': self.confidence_score,
             'inference_details': self.inference_details,
             'alternative_diseases': self.alternative_diseases,
@@ -68,6 +70,10 @@ class Diagnosis(db.Model):
             data['doctor'] = self.doctor.to_dict()
             data['disease'] = self.disease.to_dict()
             data['follow_ups'] = [fu.to_dict() for fu in self.follow_ups]
+            # incluir logs atómicos si existen
+            data['symptoms_logs'] = [s.to_dict() for s in self.symptoms_logs]
+            data['signs_logs'] = [s.to_dict() for s in self.signs_logs]
+            data['lab_results_logs'] = [l.to_dict() for l in self.lab_results_logs]
         
         return data
     
@@ -84,8 +90,6 @@ class FollowUp(db.Model):
     follow_up_date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     patient_condition = db.Column(db.String(50))  # 'improved', 'stable', 'worsened', 'critical'
     symptoms_evolution = db.Column(db.Text)  # Descripción de la evolución de síntomas
-    new_signs = db.Column(db.Text)  # JSON string con nuevos signos
-    new_lab_results = db.Column(db.Text)  # JSON string con nuevos resultados
     treatment_adjustments = db.Column(db.Text)
     notes = db.Column(db.Text)
     
@@ -105,8 +109,6 @@ class FollowUp(db.Model):
             'follow_up_date': self.follow_up_date.isoformat() if self.follow_up_date else None,
             'patient_condition': self.patient_condition,
             'symptoms_evolution': self.symptoms_evolution,
-            'new_signs': self.new_signs,
-            'new_lab_results': self.new_lab_results,
             'treatment_adjustments': self.treatment_adjustments,
             'notes': self.notes,
             'next_follow_up_date': self.next_follow_up_date.isoformat() if self.next_follow_up_date else None,

@@ -102,6 +102,11 @@ def get_patients():
             'gender': p.gender,
             'blood_type_abo': p.blood_type_abo,
             'blood_type_rh': p.blood_type_rh,
+            'height': p.height,
+            'weight': p.weight,
+            'bmi': p.bmi,
+            'smoking_status': p.smoking_status,
+            'alcohol_consumption': p.alcohol_consumption,
             'email': p.email,
             'phone': p.phone,
             'address': p.address,
@@ -159,6 +164,11 @@ def get_patient(patient_id):
             'gender': patient.gender,
             'blood_type_abo': patient.blood_type_abo,
             'blood_type_rh': patient.blood_type_rh,
+            'height': patient.height,
+            'weight': patient.weight,
+            'bmi': patient.bmi,
+            'smoking_status': patient.smoking_status,
+            'alcohol_consumption': patient.alcohol_consumption,
             'email': patient.email,
             'phone': patient.phone,
             'address': patient.address,
@@ -203,6 +213,11 @@ def create_patient():
             gender=data['gender'],
             blood_type_abo=data.get('blood_type_abo'),
             blood_type_rh=data.get('blood_type_rh'),
+            height=data.get('height'),
+            weight=data.get('weight'),
+            bmi=data.get('bmi'),
+            smoking_status=data.get('smoking_status'),
+            alcohol_consumption=data.get('alcohol_consumption'),
             email=data.get('email'),
             phone=data.get('phone'),
             address=data.get('address'),
@@ -259,6 +274,16 @@ def update_patient(patient_id):
             patient.blood_type_abo = data['blood_type_abo']
         if 'blood_type_rh' in data:
             patient.blood_type_rh = data['blood_type_rh']
+        if 'height' in data:
+            patient.height = data['height']
+        if 'weight' in data:
+            patient.weight = data['weight']
+        if 'bmi' in data:
+            patient.bmi = data['bmi']
+        if 'smoking_status' in data:
+            patient.smoking_status = data['smoking_status']
+        if 'alcohol_consumption' in data:
+            patient.alcohol_consumption = data['alcohol_consumption']
         if 'email' in data:
             patient.email = data['email']
         if 'phone' in data:

@@ -262,3 +262,95 @@ disease_postmortem_tests = db.Table('disease_postmortem_tests',
     db.Column('weight', db.Float, default=1.0),  # Peso para el motor de inferencia
     db.Column('created_at', db.DateTime, default=datetime.utcnow)
 )
+
+
+# Logs atómicos del paciente
+class PatientSymptomsLog(db.Model):
+    __tablename__ = 'patient_symptoms_log'
+    id = db.Column(db.Integer, primary_key=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey('patients.id'), nullable=False, index=True)
+    symptom_id = db.Column(db.Integer, db.ForeignKey('symptoms.id'), nullable=False, index=True)
+    recorded_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    # Agrupación opcional por visita/diagnóstico/seguimiento
+    visit_id = db.Column(db.String(64), nullable=True, index=True)
+    diagnosis_id = db.Column(db.Integer, db.ForeignKey('diagnoses.id'), nullable=True, index=True)
+    followup_id = db.Column(db.Integer, db.ForeignKey('follow_ups.id'), nullable=True, index=True)
+    note = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'patient_id': self.patient_id,
+            'symptom_id': self.symptom_id,
+            'recorded_at': self.recorded_at.isoformat() if self.recorded_at else None,
+            'visit_id': self.visit_id,
+            'diagnosis_id': self.diagnosis_id,
+            'followup_id': self.followup_id,
+            'note': self.note,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class PatientSignsLog(db.Model):
+    __tablename__ = 'patient_signs_log'
+    id = db.Column(db.Integer, primary_key=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey('patients.id'), nullable=False, index=True)
+    sign_id = db.Column(db.Integer, db.ForeignKey('signs.id'), nullable=False, index=True)
+    value_numeric = db.Column(db.Float, nullable=True)
+    value_text = db.Column(db.String(200), nullable=True)
+    unit = db.Column(db.String(50), nullable=True)
+    recorded_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    visit_id = db.Column(db.String(64), nullable=True, index=True)
+    diagnosis_id = db.Column(db.Integer, db.ForeignKey('diagnoses.id'), nullable=True, index=True)
+    followup_id = db.Column(db.Integer, db.ForeignKey('follow_ups.id'), nullable=True, index=True)
+    note = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'patient_id': self.patient_id,
+            'sign_id': self.sign_id,
+            'value_numeric': self.value_numeric,
+            'value_text': self.value_text,
+            'unit': self.unit,
+            'recorded_at': self.recorded_at.isoformat() if self.recorded_at else None,
+            'visit_id': self.visit_id,
+            'diagnosis_id': self.diagnosis_id,
+            'followup_id': self.followup_id,
+            'note': self.note,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class PatientLabResultsLog(db.Model):
+    __tablename__ = 'patient_lab_results_log'
+    id = db.Column(db.Integer, primary_key=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey('patients.id'), nullable=False, index=True)
+    lab_test_id = db.Column(db.Integer, db.ForeignKey('lab_tests.id'), nullable=False, index=True)
+    value_numeric = db.Column(db.Float, nullable=True)
+    value_text = db.Column(db.String(200), nullable=True)
+    unit = db.Column(db.String(50), nullable=True)
+    recorded_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    visit_id = db.Column(db.String(64), nullable=True, index=True)
+    diagnosis_id = db.Column(db.Integer, db.ForeignKey('diagnoses.id'), nullable=True, index=True)
+    followup_id = db.Column(db.Integer, db.ForeignKey('follow_ups.id'), nullable=True, index=True)
+    note = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'patient_id': self.patient_id,
+            'lab_test_id': self.lab_test_id,
+            'value_numeric': self.value_numeric,
+            'value_text': self.value_text,
+            'unit': self.unit,
+            'recorded_at': self.recorded_at.isoformat() if self.recorded_at else None,
+            'visit_id': self.visit_id,
+            'diagnosis_id': self.diagnosis_id,
+            'followup_id': self.followup_id,
+            'note': self.note,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }

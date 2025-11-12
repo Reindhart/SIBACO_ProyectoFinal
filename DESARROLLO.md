@@ -1,394 +1,200 @@
-# Guía de Desarrollo
+```
+// Instrumentación con Prometheus
+const transactionCounter = new prometheus.Counter({
+    name: 'inventory_transactions_total',
+    help: 'Total inventory transactions',
+    labelNames: ['type', 'status', 'store']
+});
 
-## 🎯 Flujo de Trabajo Recomendado
-
-### 1. Inicio Rápido
-
-**Windows:**
-```powershell
-.\start-dev.ps1
+// Cada transacción registra métrica
+transactionCounter.inc({ 
+    type: 'SALE', 
+    status: 'success', 
+    store: 'store_01' 
+});
 ```
 
-**Linux/Mac:**
-```bash
-chmod +x start-dev.sh
-./start-dev.sh
+**Dashboards de monitoreo (Grafana):**
+```
+Dashboard 1: Salud del sistema
+- Disponibilidad de servicios
+- Tiempo de respuesta por endpoint
+- Tasa de errores
+- Uso de CPU/memoria
+
+Dashboard 2: Métricas de negocio
+- Transacciones por hora
+- Productos con stock bajo
+- Errores de inventario por tienda
+- Usuarios activos
+
+Alertas configuradas:
+🚨 Tasa de error > 1% → Notificar equipo inmediatamente
+🚨 Tiempo de respuesta > 5s → Notificar equipo
+🚨 Stock negativo detectado → Notificar gerente + equipo
+🚨 Servicio caído → Llamada telefónica automática
 ```
 
-### 2. Desarrollo Manual
+**Distributed Tracing (Jaeger):**
+- Rastrear solicitudes a través de microservicios
+- Identificar cuellos de botella
+- Debugging de problemas de producción
 
-**Backend:**
-```bash
-cd backend
-source venv/bin/activate  # Linux/Mac
-# o
-.\venv\Scripts\Activate.ps1  # Windows
+---
 
-python wsgi.py
+### **Práctica 9: Plan de Rollback y Despliegue Gradual**
+
+**Qué implementar:**
+
+**Estrategia de despliegue:**
+```
+1. Deploy a 10% de usuarios (Tienda piloto)
+   - Monitorear 3 días
+   - Verificar métricas vs baseline
+   - Recolectar feedback
+
+2. Si todo OK → Deploy a 30% (3 tiendas más)
+   - Monitorear 3 días
+   - Verificar no hay degradación
+
+3. Si todo OK → Deploy a 100%
+   - Monitoreo intensivo primera semana
+
+En CUALQUIER momento si:
+- Tasa de error aumenta > 50%
+- Tiempo de respuesta aumenta > 100%
+- Cliente reporta problema crítico
+
+→ ROLLBACK AUTOMÁTICO a versión anterior
 ```
 
-**Frontend:**
-```bash
-cd frontend
-npm run dev
+**Feature flags:**
+
 ```
-
-## 📝 Convenciones de Código
-
-### Backend (Python)
-
-- **PEP 8**: Seguir el estilo de código de Python
-- **Type hints**: Usar cuando sea posible
-- **Docstrings**: Documentar funciones y clases importantes
-- **Nombres**:
-  - Variables y funciones: `snake_case`
-  - Clases: `PascalCase`
-  - Constantes: `UPPER_SNAKE_CASE`
-
-**Ejemplo:**
-```python
-from typing import Dict, Optional
-
-def get_user_by_id(user_id: int) -> Optional[Dict]:
-    """
-    Obtiene un usuario por su ID.
-    
-    Args:
-        user_id: El ID del usuario a buscar
-        
-    Returns:
-        Un diccionario con los datos del usuario o None si no existe
-    """
-    # Implementación...
-    pass
-```
-
-### Frontend (TypeScript/React)
-
-- **ESLint**: El proyecto incluye configuración de ESLint
-- **Nombres**:
-  - Componentes: `PascalCase`
-  - Variables y funciones: `camelCase`
-  - Constantes: `UPPER_SNAKE_CASE`
-  - Archivos de componentes: `PascalCase.tsx`
-  - Archivos de utilidades: `camelCase.ts`
-
-**Ejemplo:**
-```typescript
-interface UserProps {
-  name: string
-  email: string
+// Permitir activar/desactivar funcionalidades sin redesplegar
+if (featureFlags.isEnabled('advanced_reports', user)) {
+    // Mostrar reportes avanzados
+} else {
+    // Mostrar reportes básicos
 }
 
-export function UserCard({ name, email }: UserProps) {
-  const [isLoading, setIsLoading] = useState<boolean>(false)
-  
-  return (
-    <Card>
-      {/* Contenido */}
-    </Card>
-  )
-}
+// Si algo falla, desactivar feature desde panel sin redeployar
 ```
 
-## 🏗️ Estructura de Archivos
+---
 
-### Backend
+## **FASE 4: POST-ENTREGA**
 
+### **Práctica 10: Soporte Proactivo y Mejora Continua**
+
+**Qué implementar:**
+
+**Primera semana post-lanzamiento:**
+- **War room**: Equipo disponible 12 horas/día
+- **Monitoreo activo**: Alguien revisando dashboards constantemente
+- **Respuesta inmediata**: Cualquier error se investiga en < 30 minutos
+
+**Retrospectiva post-mortem (si hubo incidentes):**
 ```
-backend/app/
-├── models/          # Modelos de base de datos
-│   ├── __init__.py
-│   └── user.py      # Ejemplo: modelo User
-├── routes/          # Blueprints y endpoints
-│   ├── __init__.py
-│   ├── main.py      # Rutas generales
-│   └── auth.py      # Rutas de autenticación
-├── schemas/         # Schemas de validación (Marshmallow)
-│   ├── __init__.py
-│   └── user.py      # Ejemplo: schema de usuario
-└── services/        # Lógica de negocio
-    ├── __init__.py
-    └── auth.py      # Ejemplo: servicio de autenticación
-```
+Template de Post-Mortem:
 
-### Frontend
+1. ¿Qué pasó?
+   Descripción detallada del incidente
 
-```
-frontend/src/
-├── components/      # Componentes reutilizables
-│   ├── ui/          # Componentes base (shadcn)
-│   └── shared/      # Componentes compartidos
-├── features/        # Features específicas
-│   └── auth/        # Ejemplo: feature de autenticación
-│       ├── index.tsx
-│       └── components/
-├── routes/          # Rutas de TanStack Router
-│   ├── __root.tsx   # Layout raíz
-│   └── login.tsx    # Ejemplo: ruta de login
-├── lib/             # Utilidades y helpers
-│   ├── utils.ts
-│   └── api.ts       # Cliente API
-└── types/           # Tipos TypeScript compartidos
-    └── index.ts
-```
-
-## 🔄 Agregar Nuevas Funcionalidades
-
-### Crear un Nuevo Endpoint (Backend)
-
-1. **Crear el modelo** (si necesitas guardar datos):
-```python
-# backend/app/models/product.py
-from app.extensions import db
-
-class Product(db.Model):
-    __tablename__ = 'products'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    price = db.Column(db.Float, nullable=False)
-    
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'name': self.name,
-            'price': self.price
-        }
+2. Línea de tiempo
+   12:00 - Usuario reportó error
+   12:05 - Equipo notificado
+   12:15 - Causa identificada
+   12:30 - Fix deployado
+   
+3. Causa raíz (5 Porqués)
+   
+4. Impacto
+   - Usuarios afectados
+   - Tiempo de downtime
+   - Transacciones perdidas
+   
+5. Qué funcionó bien
+   - Detección rápida gracias a alertas
+   
+6. Qué mejorar
+   - Faltó prueba de carga con datos reales
+   
+7. Acciones preventivas
+   - Implementar pruebas de carga más realistas
+   - Agregar circuit breaker para ese servicio
+   - Mejorar documentación de rollback
+   
+8. Timeline de implementación de mejoras
 ```
 
-2. **Crear el schema** (validación):
-```python
-# backend/app/schemas/product.py
-from marshmallow import Schema, fields
+**Métricas de éxito a 3 meses:**
+```
+Objetivos medibles:
 
-class ProductSchema(Schema):
-    id = fields.Int(dump_only=True)
-    name = fields.Str(required=True)
-    price = fields.Float(required=True)
+1. Defectos en producción
+   Actual: 25 bugs/mes
+   Meta: < 5 bugs/mes
+   
+2. Tiempo de resolución
+   Actual: 48 horas promedio
+   Meta: < 24 horas
+   
+3. Satisfacción del cliente
+   Actual: 6/10
+   Meta: ≥ 8.5/10
+   
+4. Disponibilidad
+   Actual: 95%
+   Meta: 99.5%
+   
+5. Cobertura de pruebas
+   Actual: 35%
+   Meta: 85%
+   
+6. Technical Debt
+   Actual: 45 días
+   Meta: < 15 días
 ```
 
-3. **Crear el blueprint**:
-```python
-# backend/app/routes/products.py
-from flask import Blueprint, jsonify, request
-from app.extensions import db
-from app.models.product import Product
-from app.schemas.product import ProductSchema
+---
 
-products_bp = Blueprint('products', __name__, url_prefix='/api/products')
-product_schema = ProductSchema()
-products_schema = ProductSchema(many=True)
+## **Resumen: Framework Completo de Calidad**
 
-@products_bp.route('/', methods=['GET'])
-def get_products():
-    products = Product.query.all()
-    return jsonify({
-        'status': 'success',
-        'data': products_schema.dump(products)
-    }), 200
+### **Checklist de Inicio de Proyecto**
 ```
+ANTES DE COMENZAR:
+✓ Workshop de descubrimiento completado
+✓ Requisitos funcionales y no funcionales documentados
+✓ Prototipos validados con usuarios
+✓ Arquitectura revisada por pares
+✓ Threat modeling completado
+✓ Definition of Done acordada
+✓ CI/CD pipeline configurado
+✓ Herramientas de calidad instaladas (SonarQube, etc.)
+✓ Ambiente de staging configurado
+✓ Plan de monitoreo definido
+✓ Plan de rollback documentado
 
-4. **Registrar el blueprint**:
-```python
-# backend/app/routes/__init__.py
-from .main import main_bp
-from .auth import auth_bp
-from .products import products_bp
+DURANTE DESARROLLO:
+✓ Code reviews obligatorias (2 aprobaciones)
+✓ TDD para lógica crítica
+✓ Cobertura ≥ 80%
+✓ Quality gates pasando
+✓ Sin vulnerabilidades críticas/altas
+✓ Documentación actualizada
 
-def register_blueprints(app):
-    app.register_blueprint(main_bp)
-    app.register_blueprint(auth_bp)
-    app.register_blueprint(products_bp)
-```
+ANTES DE ENTREGAR:
+✓ UAT completado satisfactoriamente
+✓ Pruebas de carga exitosas
+✓ Dashboards de monitoreo funcionales
+✓ Alertas configuradas
+✓ Plan de rollback probado
+✓ Documentación de usuario lista
+✓ Capacitación de usuarios completada
 
-5. **Crear migración**:
-```bash
-flask db migrate -m "Add products table"
-flask db upgrade
-```
-
-### Crear una Nueva Página (Frontend)
-
-1. **Crear la ruta**:
-```typescript
-// frontend/src/routes/products.tsx
-import { createFileRoute } from '@tanstack/react-router'
-import { ProductList } from '@/features/products'
-
-export const Route = createFileRoute('/products')({
-  component: ProductList,
-})
-```
-
-2. **Crear el feature**:
-```typescript
-// frontend/src/features/products/index.tsx
-import { useEffect, useState } from 'react'
-
-interface Product {
-  id: number
-  name: string
-  price: number
-}
-
-export function ProductList() {
-  const [products, setProducts] = useState<Product[]>([])
-  
-  useEffect(() => {
-    fetch('/api/products/')
-      .then(res => res.json())
-      .then(data => setProducts(data.data))
-  }, [])
-  
-  return (
-    <div>
-      <h1>Productos</h1>
-      {products.map(product => (
-        <div key={product.id}>
-          {product.name} - ${product.price}
-        </div>
-      ))}
-    </div>
-  )
-}
-```
-
-3. **Agregar al navbar** (opcional):
-```typescript
-// frontend/src/components/Navbar.tsx
-// Agregar el link
-<li>
-  <Link to="/products">Productos</Link>
-</li>
-```
-
-## 🧪 Testing
-
-### Backend
-
-Usar pytest para tests:
-
-```python
-# backend/tests/test_products.py
-def test_get_products(client):
-    response = client.get('/api/products/')
-    assert response.status_code == 200
-    assert 'data' in response.json
-```
-
-Ejecutar tests:
-```bash
-pytest
-```
-
-### Frontend
-
-Configurar testing (ejemplo con Vitest):
-
-```bash
-npm install -D vitest @testing-library/react @testing-library/jest-dom
-```
-
-## 🔐 Autenticación
-
-### Implementar Login (Backend)
-
-```python
-# backend/app/routes/auth.py
-from flask import Blueprint, jsonify, request
-from flask_jwt_extended import create_access_token
-
-auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
-
-@auth_bp.route('/login', methods=['POST'])
-def login():
-    data = request.get_json()
-    username = data.get('username')
-    password = data.get('password')
-    
-    # Validar usuario (implementar tu lógica)
-    if validate_user(username, password):
-        access_token = create_access_token(identity=username)
-        return jsonify({
-            'status': 'success',
-            'token': access_token
-        }), 200
-    
-    return jsonify({
-        'status': 'error',
-        'message': 'Credenciales inválidas'
-    }), 401
-```
-
-### Proteger Rutas
-
-```python
-from flask_jwt_extended import jwt_required, get_jwt_identity
-
-@products_bp.route('/', methods=['POST'])
-@jwt_required()
-def create_product():
-    current_user = get_jwt_identity()
-    # Crear producto...
-```
-
-## 📚 Recursos Adicionales
-
-- [Flask Documentation](https://flask.palletsprojects.com/)
-- [SQLAlchemy Documentation](https://docs.sqlalchemy.org/)
-- [React Documentation](https://react.dev/)
-- [TanStack Router](https://tanstack.com/router)
-- [DaisyUI Components](https://daisyui.com/components/)
-- [shadcn/ui](https://ui.shadcn.com/)
-- [TypeScript Handbook](https://www.typescriptlang.org/docs/)
-
-## 💡 Tips
-
-1. **Hot Reload**: Ambos servidores (Flask y Vite) tienen hot reload activado
-2. **DevTools**: TanStack Router DevTools está disponible en desarrollo
-3. **Logs**: El backend muestra logs de SQL en desarrollo
-4. **Temas**: Usa el selector de temas para probar diferentes estilos
-5. **Type Safety**: Aprovecha TypeScript para evitar errores en tiempo de compilación
-6. **API Client**: Considera crear un cliente API centralizado en `frontend/src/lib/api.ts`
-
-## 🐛 Debugging
-
-### Backend
-```python
-# Usar breakpoints
-import pdb; pdb.set_trace()
-
-# O usar el debugger de VS Code
-```
-
-### Frontend
-```typescript
-// Console logs
-console.log('Debug:', data)
-
-// React DevTools (extensión de navegador)
-// TanStack Router DevTools (incluido en el proyecto)
-```
-
-## 📦 Deployment
-
-### Backend (con Gunicorn)
-
-```bash
-gunicorn -w 4 -b 0.0.0.0:5000 wsgi:app
-```
-
-### Frontend
-
-```bash
-npm run build
-# Los archivos estarán en frontend/dist/
-```
-
-## 🤝 Contribuir
-
-1. Crea una rama para tu feature: `git checkout -b feature/nueva-funcionalidad`
-2. Commit tus cambios: `git commit -m 'Agregar nueva funcionalidad'`
-3. Push a la rama: `git push origin feature/nueva-funcionalidad`
-4. Crea un Pull Request
+POST-ENTREGA:
+✓ Soporte proactivo primera semana
+✓ Retrospectiva realizada
+✓ Métricas siendo rastreadas
+✓ Plan de mejora continua en ejecución

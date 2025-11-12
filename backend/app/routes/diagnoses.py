@@ -4,8 +4,18 @@ from app.extensions import db
 from app.models.diagnosis import Diagnosis
 from app.models.patient import Patient
 from app.models.user import User
-from app.models.medical_knowledge import Disease
+from app.models.medical_knowledge import (
+    Disease, Symptom, Sign, LabTest, 
+    PatientSymptomsLog, PatientSignsLog, PatientLabResultsLog
+)
+from app.modules.inference_engine import (
+    get_patient_evidence, 
+    InferenceEngine, 
+    get_treatment_recommendation
+)
 from datetime import datetime
+import uuid
+import json
 
 diagnoses_bp = Blueprint('diagnoses', __name__, url_prefix='/api')
 
@@ -95,7 +105,7 @@ def get_patient_diagnoses(patient_id):
 @diagnoses_bp.route('/diagnoses/<int:diagnosis_id>', methods=['GET'])
 @jwt_required()
 def get_diagnosis(diagnosis_id):
-    """Obtener un diagnóstico específico con todas sus relaciones"""
+    """Obtener un diagnóstico específico con todas sus relaciones y logs atómicos"""
     try:
         current_user_id = int(get_jwt_identity())
         
@@ -112,15 +122,66 @@ def get_diagnosis(diagnosis_id):
         disease = db.session.get(Disease, diagnosis.disease_code)
         patient = db.session.get(Patient, diagnosis.patient_id)
         
+        # Obtener logs atómicos
+        symptoms_logs = PatientSymptomsLog.query.filter_by(diagnosis_id=diagnosis_id).all()
+        signs_logs = PatientSignsLog.query.filter_by(diagnosis_id=diagnosis_id).all()
+        lab_results_logs = PatientLabResultsLog.query.filter_by(diagnosis_id=diagnosis_id).all()
+        
+        # Construir datos de síntomas con sus detalles
+        symptoms_data = []
+        for log in symptoms_logs:
+            symptom = db.session.get(Symptom, log.symptom_id)
+            symptoms_data.append({
+                'log_id': log.id,
+                'symptom_id': log.symptom_id,
+                'symptom_name': symptom.name if symptom else None,
+                'symptom_code': symptom.code if symptom else None,
+                'recorded_at': log.recorded_at.isoformat() if log.recorded_at else None,
+                'note': log.note
+            })
+        
+        # Construir datos de signos con sus valores
+        signs_data = []
+        for log in signs_logs:
+            sign = db.session.get(Sign, log.sign_id)
+            signs_data.append({
+                'log_id': log.id,
+                'sign_id': log.sign_id,
+                'sign_name': sign.name if sign else None,
+                'sign_code': sign.code if sign else None,
+                'value_numeric': log.value_numeric,
+                'value_text': log.value_text,
+                'unit': log.unit,
+                'recorded_at': log.recorded_at.isoformat() if log.recorded_at else None,
+                'note': log.note
+            })
+        
+        # Construir datos de pruebas de laboratorio con sus resultados
+        lab_results_data = []
+        for log in lab_results_logs:
+            lab_test = db.session.get(LabTest, log.lab_test_id)
+            lab_results_data.append({
+                'log_id': log.id,
+                'lab_test_id': log.lab_test_id,
+                'lab_test_name': lab_test.name if lab_test else None,
+                'lab_test_code': lab_test.code if lab_test else None,
+                'value_numeric': log.value_numeric,
+                'value_text': log.value_text,
+                'unit': log.unit,
+                'recorded_at': log.recorded_at.isoformat() if log.recorded_at else None,
+                'note': log.note
+            })
+        
         diagnosis_data = {
             'id': diagnosis.id,
             'patient_id': diagnosis.patient_id,
             'doctor_id': diagnosis.doctor_id,
             'disease_code': diagnosis.disease_code,
             'diagnosis_date': diagnosis.diagnosis_date.isoformat() if diagnosis.diagnosis_date else None,
-            'symptoms_presented': diagnosis.symptoms_presented,
-            'signs_observed': diagnosis.signs_observed,
-            'lab_results': diagnosis.lab_results,
+            'visit_id': diagnosis.visit_id,
+            'symptoms': symptoms_data,
+            'signs': signs_data,
+            'lab_results': lab_results_data,
             'confidence_score': diagnosis.confidence_score,
             'inference_details': diagnosis.inference_details,
             'alternative_diseases': diagnosis.alternative_diseases,
@@ -159,7 +220,7 @@ def get_diagnosis(diagnosis_id):
 @jwt_required()
 def create_diagnosis():
     """
-    Crear un nuevo diagnóstico para el motor de inferencia.
+    Crear un nuevo diagnóstico utilizando el motor de inferencia.
     
     El motor de inferencia procesará los síntomas, signos y resultados de laboratorio
     para determinar automáticamente:
@@ -169,8 +230,14 @@ def create_diagnosis():
     - treatment: Tratamiento recomendado
     - inference_details: Detalles del proceso de inferencia
     
-    Por ahora, como el motor de inferencia no está implementado, se requieren
-    valores temporales para estos campos.
+    Request body esperado:
+    {
+        "patient_id": int,
+        "symptoms": [{"symptom_id": int, "note": str (opcional)}],
+        "signs": [{"sign_id": int, "value_numeric": float (opcional), "value_text": str (opcional), "unit": str (opcional), "note": str (opcional)}],
+        "lab_results": [{"lab_test_id": int, "value_numeric": float (opcional), "value_text": str (opcional), "unit": str (opcional), "note": str (opcional)}] (opcional),
+        "notes": str (opcional)
+    }
     """
     try:
         current_user_id = int(get_jwt_identity())
@@ -181,7 +248,7 @@ def create_diagnosis():
         data = request.get_json()
         
         # Validar campos requeridos (solo los que el doctor ingresa)
-        required_fields = ['patient_id', 'symptoms_presented', 'signs_observed']
+        required_fields = ['patient_id', 'symptoms', 'signs']
         for field in required_fields:
             if field not in data:
                 return jsonify({'status': 'error', 'message': f'Campo requerido: {field}'}), 400
@@ -190,53 +257,158 @@ def create_diagnosis():
         if not can_access_patient(current_user_id, data['patient_id']):
             return jsonify({'status': 'error', 'message': 'No autorizado para este paciente'}), 403
         
-        # TODO: Integrar motor de inferencia Kanren aquí
-        # Por ahora, usar valores temporales para demostración
-        # El motor de inferencia procesará:
-        # - symptoms_presented
-        # - signs_observed
-        # - lab_results (opcional)
-        # Y determinará automáticamente:
-        # - disease_code
-        # - confidence_score
-        # - alternative_diseases
-        # - treatment
-        # - treatment_start_date, treatment_end_date
-        # - follow_up_date
-        # - inference_details
+        # Generar un visit_id único para esta consulta
+        visit_id = str(uuid.uuid4())
+        recorded_at = datetime.utcnow()
         
-        # Valores temporales (serán reemplazados por el motor de inferencia)
-        inferred_disease_code = data.get('disease_code', 'RESP01')  # Temporal: requerirá inferencia
-        inferred_treatment = data.get('treatment', 'Tratamiento pendiente de inferencia')  # Temporal
-        inferred_status = 'active'  # Siempre activo al crear
+        # PASO 1: Guardar logs atómicos primero (necesarios para la inferencia)
+        # Crear logs atómicos de síntomas
+        symptoms_data = data.get('symptoms', [])
+        for symptom in symptoms_data:
+            symptom_log = PatientSymptomsLog(
+                patient_id=data['patient_id'],
+                symptom_id=symptom['symptom_id'],
+                recorded_at=recorded_at,
+                visit_id=visit_id,
+                diagnosis_id=None,  # Se actualizará después
+                note=symptom.get('note')
+            )
+            db.session.add(symptom_log)
         
-        # Crear el diagnóstico con los datos del doctor
+        # Crear logs atómicos de signos
+        signs_data = data.get('signs', [])
+        for sign in signs_data:
+            sign_log = PatientSignsLog(
+                patient_id=data['patient_id'],
+                sign_id=sign['sign_id'],
+                value_numeric=sign.get('value_numeric'),
+                value_text=sign.get('value_text'),
+                unit=sign.get('unit'),
+                recorded_at=recorded_at,
+                visit_id=visit_id,
+                diagnosis_id=None,  # Se actualizará después
+                note=sign.get('note')
+            )
+            db.session.add(sign_log)
+        
+        # Crear logs atómicos de pruebas de laboratorio
+        lab_results_data = data.get('lab_results', [])
+        for lab_result in lab_results_data:
+            lab_log = PatientLabResultsLog(
+                patient_id=data['patient_id'],
+                lab_test_id=lab_result['lab_test_id'],
+                value_numeric=lab_result.get('value_numeric'),
+                value_text=lab_result.get('value_text'),
+                unit=lab_result.get('unit'),
+                recorded_at=recorded_at,
+                visit_id=visit_id,
+                diagnosis_id=None,  # Se actualizará después
+                note=lab_result.get('note')
+            )
+            db.session.add(lab_log)
+        
+        db.session.flush()  # Guardar logs en BD para que sean consultables
+        
+        # PASO 2: Ejecutar motor de inferencia
+        try:
+            # Recuperar evidencia del paciente (incluye los logs recién creados)
+            patient_evidence = get_patient_evidence(data['patient_id'], visit_id)
+            
+            # Ejecutar motor de inferencia
+            engine = InferenceEngine()
+            inference_result = engine.diagnose(patient_evidence)
+            
+            # Extraer resultado principal
+            if inference_result['primary_diagnosis']:
+                primary = inference_result['primary_diagnosis']
+                inferred_disease_code = primary['disease_code']
+                confidence_score = primary['confidence']
+                
+                # Obtener recomendaciones de tratamiento
+                treatment_info = get_treatment_recommendation(inferred_disease_code)
+                inferred_treatment = treatment_info['treatment_recommendations'] if treatment_info else 'No disponible'
+                
+                # Preparar detalles de inferencia
+                inference_details = json.dumps({
+                    'score': primary['score'],
+                    'max_possible_score': primary['max_possible_score'],
+                    'matched_evidence': primary['matched_evidence'],
+                    'inference_timestamp': inference_result['inference_timestamp'],
+                    'total_diseases_evaluated': inference_result['total_diseases_evaluated']
+                })
+                
+                # Preparar diagnósticos alternativos
+                alternative_diseases = json.dumps([
+                    {
+                        'disease_code': alt['disease_code'],
+                        'disease_name': alt['disease_name'],
+                        'confidence': alt['confidence'],
+                        'score': alt['score']
+                    }
+                    for alt in inference_result['alternative_diagnoses']
+                ])
+                
+            else:
+                # No se pudo inferir diagnóstico
+                return jsonify({
+                    'status': 'error',
+                    'message': 'No se pudo determinar un diagnóstico con la evidencia disponible',
+                    'data': {
+                        'total_diseases_evaluated': inference_result.get('total_diseases_evaluated', 0),
+                        'total_candidates': inference_result.get('total_candidates', 0)
+                    }
+                }), 400
+                
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({
+                'status': 'error',
+                'message': f'Error en motor de inferencia: {str(e)}'
+            }), 500
+        
+        # PASO 3: Crear el diagnóstico con resultados de la inferencia
         diagnosis = Diagnosis(
             patient_id=data['patient_id'],
             doctor_id=current_user_id,
-            disease_code=inferred_disease_code,  # Será inferido por Kanren
-            diagnosis_date=datetime.utcnow(),  # Fecha actual automática
-            symptoms_presented=data['symptoms_presented'],
-            signs_observed=data['signs_observed'],
-            lab_results=data.get('lab_results'),
-            confidence_score=data.get('confidence_score'),  # Será calculado por Kanren
-            inference_details=data.get('inference_details'),  # Será generado por Kanren
-            alternative_diseases=data.get('alternative_diseases'),  # Será generado por Kanren
-            treatment=inferred_treatment,  # Será inferido por Kanren
-            treatment_start_date=datetime.utcnow(),  # Fecha actual automática
-            treatment_end_date=None,  # Se establecerá después
+            disease_code=inferred_disease_code,
+            diagnosis_date=recorded_at,
+            visit_id=visit_id,
+            confidence_score=confidence_score,
+            inference_details=inference_details,
+            alternative_diseases=alternative_diseases,
+            treatment=inferred_treatment,
+            treatment_start_date=recorded_at,
+            treatment_end_date=None,
             notes=data.get('notes'),
-            status=inferred_status,
-            follow_up_date=None  # Será sugerido por Kanren
+            status='active',
+            follow_up_date=None
         )
         
         db.session.add(diagnosis)
+        db.session.flush()  # Obtener diagnosis.id
+        
+        # PASO 4: Actualizar los logs con el diagnosis_id
+        PatientSymptomsLog.query.filter_by(visit_id=visit_id).update({'diagnosis_id': diagnosis.id})
+        PatientSignsLog.query.filter_by(visit_id=visit_id).update({'diagnosis_id': diagnosis.id})
+        PatientLabResultsLog.query.filter_by(visit_id=visit_id).update({'diagnosis_id': diagnosis.id})
+        
         db.session.commit()
+        
+        # Obtener información de la enfermedad diagnosticada
+        disease = db.session.get(Disease, inferred_disease_code)
         
         return jsonify({
             'status': 'success',
             'message': 'Diagnóstico creado correctamente',
-            'data': {'id': diagnosis.id}
+            'data': {
+                'id': diagnosis.id,
+                'visit_id': visit_id,
+                'disease_code': inferred_disease_code,
+                'disease_name': disease.name if disease else None,
+                'confidence_score': confidence_score,
+                'alternative_diagnoses': inference_result['alternative_diagnoses'][:3],  # Top 3
+                'treatment': inferred_treatment[:200] + '...' if len(inferred_treatment) > 200 else inferred_treatment
+            }
         }), 201
         
     except Exception as e:

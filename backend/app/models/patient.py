@@ -25,6 +25,12 @@ class Patient(db.Model):
     allergies = db.Column(db.Text)  # Alergias conocidas
     chronic_conditions = db.Column(db.Text)  # Condiciones crónicas
     doctor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    # Datos basales / factores de riesgo
+    height = db.Column(db.Float)  # altura en metros
+    weight = db.Column(db.Float)  # peso en kg
+    bmi = db.Column(db.Float)     # índice de masa corporal
+    smoking_status = db.Column(db.String(50))  # e.g., 'never', 'former', 'current'
+    alcohol_consumption = db.Column(db.String(50))  # e.g., 'none', 'moderate', 'high'
     
     # Estado
     is_active = db.Column(db.Boolean, default=True)
@@ -36,6 +42,10 @@ class Patient(db.Model):
     
     # Relaciones
     diagnoses = db.relationship('Diagnosis', backref='patient', lazy='dynamic', cascade='all, delete-orphan')
+    # Logs atómicos del paciente
+    symptoms_logs = db.relationship('PatientSymptomsLog', backref='patient', lazy='dynamic')
+    signs_logs = db.relationship('PatientSignsLog', backref='patient', lazy='dynamic')
+    lab_results_logs = db.relationship('PatientLabResultsLog', backref='patient', lazy='dynamic')
     
     @property
     def full_name(self):
@@ -79,6 +89,11 @@ class Patient(db.Model):
             'allergies': self.allergies,
             'chronic_conditions': self.chronic_conditions,
             'doctor_id': self.doctor_id,
+            'height': self.height,
+            'weight': self.weight,
+            'bmi': self.bmi,
+            'smoking_status': self.smoking_status,
+            'alcohol_consumption': self.alcohol_consumption,
             'is_active': self.is_active,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,

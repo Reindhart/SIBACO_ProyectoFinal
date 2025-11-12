@@ -1540,6 +1540,11 @@ def create_test_data():
                     'gender': 'M',
                     'blood_type_abo': 0,  # O
                     'blood_type_rh': 1,   # Positivo
+                    'height': 175.0,
+                    'weight': 82.5,
+                    'bmi': 26.9,
+                    'smoking_status': 'ex-fumador',
+                    'alcohol_consumption': 'ocasional',
                     'email': 'juan.perez@email.com',
                     'phone': '555-2001',
                     'address': 'Calle Principal 123, Ciudad',
@@ -1556,6 +1561,11 @@ def create_test_data():
                     'gender': 'F',
                     'blood_type_abo': 1,  # A
                     'blood_type_rh': 1,   # Positivo
+                    'height': 162.0,
+                    'weight': 58.0,
+                    'bmi': 22.1,
+                    'smoking_status': 'nunca',
+                    'alcohol_consumption': 'nunca',
                     'email': 'maria.gonzalez@email.com',
                     'phone': '555-2002',
                     'address': 'Av. Central 456, Ciudad',
@@ -1572,6 +1582,11 @@ def create_test_data():
                     'gender': 'M',
                     'blood_type_abo': 2,  # B
                     'blood_type_rh': 1,   # Positivo
+                    'height': 168.0,
+                    'weight': 95.0,
+                    'bmi': 33.7,
+                    'smoking_status': 'nunca',
+                    'alcohol_consumption': 'moderado',
                     'email': 'carlos.rodriguez@email.com',
                     'phone': '555-2003',
                     'address': 'Plaza Mayor 789, Ciudad',
@@ -1588,6 +1603,11 @@ def create_test_data():
                     'gender': 'F',
                     'blood_type_abo': 3,  # AB
                     'blood_type_rh': 1,   # Positivo
+                    'height': 158.0,
+                    'weight': 52.0,
+                    'bmi': 20.8,
+                    'smoking_status': 'nunca',
+                    'alcohol_consumption': 'ocasional',
                     'email': 'ana.fernandez@email.com',
                     'phone': '555-2004',
                     'address': 'Calle Secundaria 321, Ciudad',
@@ -1604,6 +1624,11 @@ def create_test_data():
                     'gender': 'M',
                     'blood_type_abo': 0,  # O
                     'blood_type_rh': 0,   # Negativo
+                    'height': 180.0,
+                    'weight': 78.0,
+                    'bmi': 24.1,
+                    'smoking_status': 'fumador',
+                    'alcohol_consumption': 'moderado',
                     'email': 'luis.martinez@email.com',
                     'phone': '555-2005',
                     'address': 'Av. Libertad 654, Ciudad',
@@ -1620,6 +1645,11 @@ def create_test_data():
                     'gender': 'F',
                     'blood_type_abo': 1,  # A
                     'blood_type_rh': 0,   # Negativo
+                    'height': 165.0,
+                    'weight': 68.0,
+                    'bmi': 25.0,
+                    'smoking_status': 'nunca',
+                    'alcohol_consumption': 'nunca',
                     'email': 'elena.lopez@email.com',
                     'phone': '555-2006',
                     'address': 'Calle Nueva 987, Ciudad',
@@ -1636,6 +1666,11 @@ def create_test_data():
                     'gender': 'M',
                     'blood_type_abo': 2,  # B
                     'blood_type_rh': 0,   # Negativo
+                    'height': 172.0,
+                    'weight': 88.0,
+                    'bmi': 29.7,
+                    'smoking_status': 'ex-fumador',
+                    'alcohol_consumption': 'ocasional',
                     'email': 'pedro.sanchez@email.com',
                     'phone': '555-2007',
                     'address': 'Plaza Vieja 147, Ciudad',
@@ -1652,6 +1687,11 @@ def create_test_data():
                     'gender': 'F',
                     'blood_type_abo': 0,  # O
                     'blood_type_rh': 1,   # Positivo
+                    'height': 160.0,
+                    'weight': 55.0,
+                    'bmi': 21.5,
+                    'smoking_status': 'nunca',
+                    'alcohol_consumption': 'ocasional',
                     'email': 'carmen.ramirez@email.com',
                     'phone': '555-2008',
                     'address': 'Av. Esperanza 258, Ciudad',
@@ -1668,6 +1708,11 @@ def create_test_data():
                     'gender': 'M',
                     'blood_type_abo': 1,  # A
                     'blood_type_rh': 1,   # Positivo
+                    'height': 178.0,
+                    'weight': 85.0,
+                    'bmi': 26.8,
+                    'smoking_status': 'nunca',
+                    'alcohol_consumption': 'nunca',
                     'email': 'roberto.hernandez@email.com',
                     'phone': '555-2009',
                     'address': 'Calle del Sol 369, Ciudad',
@@ -1684,6 +1729,11 @@ def create_test_data():
                     'gender': 'F',
                     'blood_type_abo': 3,  # AB
                     'blood_type_rh': 0,   # Negativo
+                    'height': 155.0,
+                    'weight': 60.0,
+                    'bmi': 25.0,
+                    'smoking_status': 'nunca',
+                    'alcohol_consumption': 'ocasional',
                     'email': 'isabel.torres@email.com',
                     'phone': '555-2010',
                     'address': 'Av. Luna 741, Ciudad',
@@ -1935,7 +1985,37 @@ def create_test_data():
                 }
             ]
             
+            # Generar valores aleatorios pero realistas para los nuevos campos
+            def generate_health_metrics(gender):
+                """Genera métricas de salud realistas basadas en género"""
+                import random
+                
+                if gender == 'M':
+                    height = random.uniform(160.0, 190.0)
+                    weight = random.uniform(60.0, 110.0)
+                else:  # F
+                    height = random.uniform(150.0, 175.0)
+                    weight = random.uniform(45.0, 90.0)
+                
+                bmi = round(weight / ((height / 100) ** 2), 1)
+                
+                smoking_options = ['nunca', 'ex-fumador', 'fumador', 'ocasional']
+                alcohol_options = ['nunca', 'ocasional', 'moderado', 'frecuente']
+                
+                return {
+                    'height': round(height, 1),
+                    'weight': round(weight, 1),
+                    'bmi': bmi,
+                    'smoking_status': random.choice(smoking_options),
+                    'alcohol_consumption': random.choice(alcohol_options)
+                }
+            
             for patient_data in patients_data:
+                # Agregar campos de salud si no están presentes
+                if 'height' not in patient_data:
+                    metrics = generate_health_metrics(patient_data['gender'])
+                    patient_data.update(metrics)
+                
                 patient = Patient.query.filter_by(
                     first_name=patient_data['first_name'],
                     paternal_surname=patient_data['paternal_surname'],
@@ -2112,6 +2192,283 @@ def create_test_data():
             add_postmortem_tests_if_not_exist(infec02, [pm018], "INFEC02")
         
         db.session.commit()
+        
+        # ==================== ACTUALIZAR PESOS DE ASOCIACIONES ====================
+        print("\n⚖️  ACTUALIZANDO PESOS DE ASOCIACIONES")
+        print("-" * 60)
+        print("Los pesos reflejan la relevancia clínica:")
+        print("  • 1.0 = Muy Alta (síntoma/signo/prueba cardinal o gold standard)")
+        print("  • 0.8 = Alta (muy común y específico)")
+        print("  • 0.6 = Moderada (frecuente pero no específico)")
+        print("  • 0.4 = Baja (puede presentarse pero no es característico)")
+        print("  • 0.2 = Muy Baja (raro o incidental)")
+        print("\n")
+        
+        # Actualizar pesos para síntomas, signos, pruebas lab y postmortem
+        weights_updates = [
+            # ========== SÍNTOMAS ==========
+            # RESP01 - Resfriado común
+            ('RESP01', 'S005', 1.0, 'síntoma'),  # Congestión nasal - CARDINAL
+            ('RESP01', 'S002', 0.8, 'síntoma'),  # Tos seca
+            ('RESP01', 'S004', 0.6, 'síntoma'),  # Dolor de garganta
+            ('RESP01', 'S001', 0.4, 'síntoma'),  # Fiebre (baja grado)
+            ('RESP01', 'S006', 0.5, 'síntoma'),  # Dolor de cabeza
+            ('RESP01', 'S017', 0.4, 'síntoma'),  # Pérdida de apetito
+            
+            # RESP02 - Gripe
+            ('RESP02', 'S001', 1.0, 'síntoma'),  # Fiebre alta - CARDINAL
+            ('RESP02', 'S012', 1.0, 'síntoma'),  # Dolor muscular - CARDINAL
+            ('RESP02', 'S011', 0.9, 'síntoma'),  # Fatiga severa
+            ('RESP02', 'S018', 0.9, 'síntoma'),  # Escalofríos
+            ('RESP02', 'S006', 0.8, 'síntoma'),  # Dolor de cabeza
+            ('RESP02', 'S002', 0.7, 'síntoma'),  # Tos seca
+            ('RESP02', 'S004', 0.6, 'síntoma'),  # Dolor de garganta
+            
+            # RESP03 - Neumonía
+            ('RESP03', 'S001', 1.0, 'síntoma'),  # Fiebre alta - CARDINAL
+            ('RESP03', 'S003', 1.0, 'síntoma'),  # Tos productiva - CARDINAL
+            ('RESP03', 'S014', 1.0, 'síntoma'),  # Dificultad respirar - CARDINAL
+            ('RESP03', 'S015', 0.7, 'síntoma'),  # Dolor torácico
+            ('RESP03', 'S018', 0.8, 'síntoma'),  # Escalofríos
+            ('RESP03', 'S011', 0.7, 'síntoma'),  # Fatiga
+            
+            # RESP04 - Bronquitis
+            ('RESP04', 'S003', 1.0, 'síntoma'),  # Tos productiva - CARDINAL
+            ('RESP04', 'S002', 0.8, 'síntoma'),  # Tos seca (inicio)
+            ('RESP04', 'S015', 0.6, 'síntoma'),  # Dolor torácico leve
+            ('RESP04', 'S011', 0.5, 'síntoma'),  # Fatiga
+            
+            # GASTR01 - Gastroenteritis
+            ('GASTR01', 'S009', 1.0, 'síntoma'),  # Diarrea - CARDINAL
+            ('GASTR01', 'S008', 0.9, 'síntoma'),  # Vómito
+            ('GASTR01', 'S007', 0.9, 'síntoma'),  # Náuseas
+            ('GASTR01', 'S010', 0.7, 'síntoma'),  # Dolor abdominal
+            ('GASTR01', 'S001', 0.6, 'síntoma'),  # Fiebre
+            ('GASTR01', 'S011', 0.5, 'síntoma'),  # Fatiga
+            
+            # GASTR02 - Gastritis
+            ('GASTR02', 'S010', 1.0, 'síntoma'),  # Dolor abdominal alto - CARDINAL
+            ('GASTR02', 'S007', 0.8, 'síntoma'),  # Náuseas
+            ('GASTR02', 'S008', 0.6, 'síntoma'),  # Vómito
+            ('GASTR02', 'S017', 0.7, 'síntoma'),  # Pérdida de apetito
+            
+            # GASTR03 - Apendicitis
+            ('GASTR03', 'S010', 1.0, 'síntoma'),  # Dolor abdominal RID - CARDINAL
+            ('GASTR03', 'S007', 0.9, 'síntoma'),  # Náuseas
+            ('GASTR03', 'S001', 0.9, 'síntoma'),  # Fiebre
+            ('GASTR03', 'S008', 0.7, 'síntoma'),  # Vómito
+            ('GASTR03', 'S017', 0.6, 'síntoma'),  # Pérdida de apetito
+            
+            # CARD01 - Hipertensión (a menudo asintomática)
+            ('CARD01', 'S006', 0.5, 'síntoma'),  # Dolor cabeza (no siempre)
+            ('CARD01', 'S016', 0.4, 'síntoma'),  # Mareo
+            
+            # CARD02 - Insuficiencia cardíaca
+            ('CARD02', 'S014', 1.0, 'síntoma'),  # Disnea - CARDINAL
+            ('CARD02', 'S011', 0.9, 'síntoma'),  # Fatiga severa
+            ('CARD02', 'S019', 0.6, 'síntoma'),  # Sudoración
+            ('CARD02', 'S015', 0.5, 'síntoma'),  # Dolor torácico
+            
+            # METAB01 - Diabetes
+            ('METAB01', 'S011', 0.8, 'síntoma'),  # Fatiga
+            ('METAB01', 'S016', 0.6, 'síntoma'),  # Mareo
+            
+            # METAB02 - Hipotiroidismo
+            ('METAB02', 'S011', 1.0, 'síntoma'),  # Fatiga - CARDINAL
+            ('METAB02', 'S012', 0.7, 'síntoma'),  # Dolor muscular
+            
+            # INFEC01 - ITU
+            ('INFEC01', 'S020', 1.0, 'síntoma'),  # Disuria - CARDINAL
+            ('INFEC01', 'S001', 0.7, 'síntoma'),  # Fiebre
+            ('INFEC01', 'S010', 0.6, 'síntoma'),  # Dolor suprapúbico
+            
+            # INFEC02 - Faringitis
+            ('INFEC02', 'S004', 1.0, 'síntoma'),  # Dolor garganta - CARDINAL
+            ('INFEC02', 'S001', 0.9, 'síntoma'),  # Fiebre
+            ('INFEC02', 'S006', 0.6, 'síntoma'),  # Dolor de cabeza
+            
+            # ========== SIGNOS ==========
+            # CARD01 - Hipertensión
+            ('CARD01', 'SG002', 1.0, 'signo'),   # PA sistólica elevada - CARDINAL
+            ('CARD01', 'SG003', 1.0, 'signo'),   # PA diastólica elevada - CARDINAL
+            
+            # CARD02 - Insuficiencia cardíaca
+            ('CARD02', 'SG006', 1.0, 'signo'),   # SpO2 baja - CARDINAL
+            ('CARD02', 'SG005', 0.8, 'signo'),   # FR elevada
+            ('CARD02', 'SG004', 0.8, 'signo'),   # FC elevada
+            ('CARD02', 'SG017', 0.9, 'signo'),   # Edema MMII - muy característico
+            ('CARD02', 'SG034', 0.8, 'signo'),   # Ingurgitación yugular
+            
+            # RESP03 - Neumonía
+            ('RESP03', 'SG001', 1.0, 'signo'),   # Temperatura >38°C - CARDINAL
+            ('RESP03', 'SG005', 0.9, 'signo'),   # Taquipnea
+            ('RESP03', 'SG006', 0.8, 'signo'),   # SpO2 disminuida
+            ('RESP03', 'SG020', 0.9, 'signo'),   # Estertores - muy característico
+            ('RESP03', 'SG032', 0.9, 'signo'),   # Crepitantes
+            
+            # GASTR03 - Apendicitis
+            ('GASTR03', 'SG023', 1.0, 'signo'),  # Dolor palpación RID - CARDINAL
+            ('GASTR03', 'SG026', 0.9, 'signo'),  # Signo de rebote - Blumberg
+            ('GASTR03', 'SG025', 0.8, 'signo'),  # Rigidez abdominal
+            ('GASTR03', 'SG001', 0.8, 'signo'),  # Fiebre
+            
+            # METAB01 - Diabetes
+            ('METAB01', 'SG002', 0.6, 'signo'),  # HTA (complicación)
+            ('METAB01', 'SG011', 1.0, 'signo'),  # Glucosa capilar elevada - CARDINAL
+            
+            # INFEC02 - Faringitis
+            ('INFEC02', 'SG049', 1.0, 'signo'),  # Exudado faríngeo - CARDINAL
+            ('INFEC02', 'SG048', 0.8, 'signo'),  # Adenopatías cervicales
+            ('INFEC02', 'SG001', 0.8, 'signo'),  # Fiebre
+            
+            # ========== PRUEBAS DE LABORATORIO ==========
+            # RESP03 - Neumonía
+            ('RESP03', 'LAB001', 0.7, 'lab_test'),  # Hemograma (leucocitosis)
+            ('RESP03', 'LAB008', 0.9, 'lab_test'),  # PCR elevada - muy específica
+            ('RESP03', 'LAB016', 1.0, 'lab_test'),  # Procalcitonina - GOLD STANDARD bacteriana
+            ('RESP03', 'LAB019', 1.0, 'lab_test'),  # RX tórax - GOLD STANDARD diagnóstico
+            ('RESP03', 'LAB018', 0.8, 'lab_test'),  # Hemocultivo
+            ('RESP03', 'LAB014', 0.7, 'lab_test'),  # Gasometría (si insuf resp)
+            
+            # RESP02 - Gripe
+            ('RESP02', 'LAB001', 0.5, 'lab_test'),  # Hemograma (leucopenia posible)
+            ('RESP02', 'LAB008', 0.6, 'lab_test'),  # PCR (menos elevada que bacteriana)
+            
+            # GASTR01 - Gastroenteritis
+            ('GASTR01', 'LAB001', 0.5, 'lab_test'),  # Hemograma (hemoconcentración)
+            ('GASTR01', 'LAB015', 0.7, 'lab_test'),  # Electrolitos (desbalance)
+            
+            # GASTR03 - Apendicitis
+            ('GASTR03', 'LAB001', 0.8, 'lab_test'),  # Hemograma (leucocitosis con desviación izq)
+            ('GASTR03', 'LAB008', 0.9, 'lab_test'),  # PCR elevada - muy útil
+            
+            # CARD01 - Hipertensión
+            ('CARD01', 'LAB004', 0.7, 'lab_test'),  # Creatinina (evaluar daño renal)
+            ('CARD01', 'LAB015', 0.6, 'lab_test'),  # Electrolitos
+            ('CARD01', 'LAB006', 0.7, 'lab_test'),  # Perfil lipídico (factor riesgo)
+            
+            # CARD02 - Insuficiencia cardíaca
+            ('CARD02', 'LAB012', 1.0, 'lab_test'),  # BNP - GOLD STANDARD diagnóstico
+            ('CARD02', 'LAB020', 0.9, 'lab_test'),  # ECG - muy importante
+            ('CARD02', 'LAB019', 0.8, 'lab_test'),  # RX tórax (cardiomegalia, edema)
+            ('CARD02', 'LAB004', 0.6, 'lab_test'),  # Creatinina (función renal)
+            ('CARD02', 'LAB015', 0.6, 'lab_test'),  # Electrolitos
+            
+            # METAB01 - Diabetes
+            ('METAB01', 'LAB002', 1.0, 'lab_test'),  # Glucosa ayunas - GOLD STANDARD
+            ('METAB01', 'LAB003', 1.0, 'lab_test'),  # HbA1c - GOLD STANDARD control
+            ('METAB01', 'LAB004', 0.7, 'lab_test'),  # Creatinina (complicación renal)
+            ('METAB01', 'LAB006', 0.7, 'lab_test'),  # Perfil lipídico (comorbilidad)
+            
+            # INFEC01 - ITU
+            ('INFEC01', 'LAB007', 1.0, 'lab_test'),  # EGO - GOLD STANDARD
+            ('INFEC01', 'LAB001', 0.6, 'lab_test'),  # Hemograma (leucocitosis)
+            ('INFEC01', 'LAB008', 0.7, 'lab_test'),  # PCR elevada
+            
+            # ========== PRUEBAS POSTMORTEM ==========
+            # RESP03 - Neumonía
+            ('RESP03', 'PM001', 1.0, 'postmortem'),  # Autopsia neumonía bacteriana - confirmatoria
+            ('RESP03', 'PM011', 1.0, 'postmortem'),  # Autopsia neumonía nosocomial - confirmatoria
+            
+            # RESP02 - Gripe
+            ('RESP02', 'PM005', 1.0, 'postmortem'),  # Autopsia SDRA por Influenza - confirmatoria
+            ('RESP02', 'PM017', 0.9, 'postmortem'),  # Neumonía aspirativa (complicación)
+            
+            # GASTR03 - Apendicitis
+            ('GASTR03', 'PM003', 1.0, 'postmortem'),  # Autopsia apendicitis perforada - confirmatoria
+            ('GASTR03', 'PM012', 0.8, 'postmortem'),  # Peritonitis (relacionada)
+            
+            # GASTR01 - Gastroenteritis
+            ('GASTR01', 'PM007', 1.0, 'postmortem'),  # Autopsia deshidratación por gastroenteritis - confirmatoria
+            
+            # CARD01 - Hipertensión
+            ('CARD01', 'PM006', 0.7, 'postmortem'),  # TEP (complicación trombótica)
+            ('CARD01', 'PM009', 1.0, 'postmortem'),  # Hemorragia cerebral por HTA - muy específica
+            ('CARD01', 'PM016', 0.6, 'postmortem'),  # TEP postoperatorio
+            ('CARD01', 'PM020', 0.8, 'postmortem'),  # Hematoma subdural en anticoagulado
+            
+            # CARD02 - Insuficiencia cardíaca
+            ('CARD02', 'PM002', 0.9, 'postmortem'),  # IAM (causa de IC)
+            ('CARD02', 'PM013', 1.0, 'postmortem'),  # Arritmia ventricular con cardiopatía - confirmatoria
+            ('CARD02', 'PM019', 0.9, 'postmortem'),  # Miocardiopatía arrítmica
+            
+            # METAB01 - Diabetes
+            ('METAB01', 'PM004', 1.0, 'postmortem'),  # Cetoacidosis diabética - confirmatoria
+            
+            # INFEC01 - ITU
+            ('INFEC01', 'PM010', 1.0, 'postmortem'),  # Pielonefritis con shock séptico - evolución de ITU
+            
+            # GASTR02 - Gastritis
+            ('GASTR02', 'PM015', 0.9, 'postmortem'),  # Hemorragia digestiva por úlcera
+            
+            # RESP04 - Bronquitis/EPOC
+            ('RESP04', 'PM008', 0.9, 'postmortem'),  # Cor pulmonale por EPOC - evolución crónica
+            
+            # METAB02 - Hipotiroidismo
+            ('METAB02', 'PM014', 0.6, 'postmortem'),  # IRA sobre IRC (relación indirecta)
+            
+            # INFEC02 - Faringitis/infecciones
+            ('INFEC02', 'PM018', 0.5, 'postmortem'),  # Sepsis abdominal (relación lejana)
+        ]
+        
+        # Aplicar actualizaciones de pesos
+        from sqlalchemy import text
+        
+        stats = {'síntoma': 0, 'signo': 0, 'lab_test': 0, 'postmortem': 0, 'errores': 0}
+        
+        for disease_code, entity_code, weight, entity_type in weights_updates:
+            try:
+                if entity_type == 'síntoma':
+                    symptom = Symptom.query.filter_by(code=entity_code).first()
+                    if symptom:
+                        db.session.execute(
+                            text("UPDATE disease_symptoms SET weight = :weight WHERE disease_code = :disease AND symptom_id = :symptom"),
+                            {'weight': weight, 'disease': disease_code, 'symptom': symptom.id}
+                        )
+                        stats['síntoma'] += 1
+                        
+                elif entity_type == 'signo':
+                    sign = Sign.query.filter_by(code=entity_code).first()
+                    if sign:
+                        db.session.execute(
+                            text("UPDATE disease_signs SET weight = :weight WHERE disease_code = :disease AND sign_id = :sign"),
+                            {'weight': weight, 'disease': disease_code, 'sign': sign.id}
+                        )
+                        stats['signo'] += 1
+                        
+                elif entity_type == 'lab_test':
+                    lab_test = LabTest.query.filter_by(code=entity_code).first()
+                    if lab_test:
+                        db.session.execute(
+                            text("UPDATE disease_lab_tests SET weight = :weight WHERE disease_code = :disease AND lab_test_id = :lab_test"),
+                            {'weight': weight, 'disease': disease_code, 'lab_test': lab_test.id}
+                        )
+                        stats['lab_test'] += 1
+                        
+                elif entity_type == 'postmortem':
+                    pm_test = PostmortemTest.query.filter_by(code=entity_code).first()
+                    if pm_test:
+                        db.session.execute(
+                            text("UPDATE disease_postmortem_tests SET weight = :weight WHERE disease_code = :disease AND postmortem_test_id = :pm_test"),
+                            {'weight': weight, 'disease': disease_code, 'pm_test': pm_test.id}
+                        )
+                        stats['postmortem'] += 1
+                        
+            except Exception as e:
+                stats['errores'] += 1
+                print(f"⚠️  Error actualizando peso {disease_code}-{entity_code}: {e}")
+        
+        db.session.commit()
+        
+        print("\n✅ RESUMEN DE PESOS ACTUALIZADOS:")
+        print(f"   • Síntomas:           {stats['síntoma']} asociaciones")
+        print(f"   • Signos:             {stats['signo']} asociaciones")
+        print(f"   • Pruebas lab:        {stats['lab_test']} asociaciones")
+        print(f"   • Pruebas postmortem: {stats['postmortem']} asociaciones")
+        if stats['errores'] > 0:
+            print(f"   ⚠️  Errores:          {stats['errores']}")
+        print("\nℹ️  Otras asociaciones mantienen peso por defecto (1.0)")
+        print("ℹ️  Los pesos reflejan especificidad y sensibilidad diagnóstica\n")
         
         # Guardar todos los cambios
         db.session.commit()
