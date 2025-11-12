@@ -63,7 +63,7 @@ export default function DiagnosisDetailModal({ diagnosis, onClose }: DiagnosisDe
                   <span className="text-sm font-semibold text-base-content/70">Enfermedad:</span>
                   <p className="text-base font-medium mt-1">
                     <span className="badge badge-primary badge-lg">
-                      {diagnosis.disease?.name || `ID: ${diagnosis.disease_id}`}
+                      {diagnosis.disease?.name || `Código: ${diagnosis.disease_code}`}
                     </span>
                   </p>
                   {diagnosis.disease?.description && (
@@ -107,47 +107,60 @@ export default function DiagnosisDetailModal({ diagnosis, onClose }: DiagnosisDe
               <h4 className="card-title text-lg">Información Clínica</h4>
               
               <div className="space-y-4 mt-4">
-                {diagnosis.symptoms_presented && (
+                {/* Síntomas */}
+                {diagnosis.symptoms_logs && diagnosis.symptoms_logs.length > 0 && (
                   <div>
                     <span className="text-sm font-semibold text-base-content/70">Síntomas Presentados:</span>
-                    <div className="mt-2 p-3 bg-base-100 rounded-lg">
-                      {typeof parseJSON(diagnosis.symptoms_presented) === 'object' ? (
-                        <pre className="text-sm whitespace-pre-wrap">
-                          {JSON.stringify(parseJSON(diagnosis.symptoms_presented), null, 2)}
-                        </pre>
-                      ) : (
-                        <p className="text-sm">{diagnosis.symptoms_presented}</p>
-                      )}
+                    <div className="mt-2 space-y-2">
+                      {diagnosis.symptoms_logs.map((log) => (
+                        <div key={log.log_id} className="p-3 bg-base-100 rounded-lg">
+                          <p className="text-sm font-medium">{log.symptom_name || `Síntoma ID: ${log.symptom_id}`}</p>
+                          {log.symptom_code && <p className="text-xs text-base-content/60">Código: {log.symptom_code}</p>}
+                          {log.note && <p className="text-sm mt-1 italic">{log.note}</p>}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
 
-                {diagnosis.signs_observed && (
+                {/* Signos */}
+                {diagnosis.signs_logs && diagnosis.signs_logs.length > 0 && (
                   <div>
                     <span className="text-sm font-semibold text-base-content/70">Signos Observados:</span>
-                    <div className="mt-2 p-3 bg-base-100 rounded-lg">
-                      {typeof parseJSON(diagnosis.signs_observed) === 'object' ? (
-                        <pre className="text-sm whitespace-pre-wrap">
-                          {JSON.stringify(parseJSON(diagnosis.signs_observed), null, 2)}
-                        </pre>
-                      ) : (
-                        <p className="text-sm">{diagnosis.signs_observed}</p>
-                      )}
+                    <div className="mt-2 space-y-2">
+                      {diagnosis.signs_logs.map((log) => (
+                        <div key={log.log_id} className="p-3 bg-base-100 rounded-lg">
+                          <p className="text-sm font-medium">{log.sign_name || `Signo ID: ${log.sign_id}`}</p>
+                          {log.sign_code && <p className="text-xs text-base-content/60">Código: {log.sign_code}</p>}
+                          <p className="text-sm mt-1">
+                            <span className="font-semibold">Valor: </span>
+                            {log.value_numeric !== undefined ? log.value_numeric : log.value_text}
+                            {log.unit && ` ${log.unit}`}
+                          </p>
+                          {log.note && <p className="text-sm mt-1 italic">{log.note}</p>}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
 
-                {diagnosis.lab_results && (
+                {/* Resultados de laboratorio */}
+                {diagnosis.lab_results_logs && diagnosis.lab_results_logs.length > 0 && (
                   <div>
                     <span className="text-sm font-semibold text-base-content/70">Resultados de Laboratorio:</span>
-                    <div className="mt-2 p-3 bg-base-100 rounded-lg">
-                      {typeof parseJSON(diagnosis.lab_results) === 'object' ? (
-                        <pre className="text-sm whitespace-pre-wrap">
-                          {JSON.stringify(parseJSON(diagnosis.lab_results), null, 2)}
-                        </pre>
-                      ) : (
-                        <p className="text-sm">{diagnosis.lab_results}</p>
-                      )}
+                    <div className="mt-2 space-y-2">
+                      {diagnosis.lab_results_logs.map((log) => (
+                        <div key={log.log_id} className="p-3 bg-base-100 rounded-lg">
+                          <p className="text-sm font-medium">{log.lab_test_name || `Prueba ID: ${log.lab_test_id}`}</p>
+                          {log.lab_test_code && <p className="text-xs text-base-content/60">Código: {log.lab_test_code}</p>}
+                          <p className="text-sm mt-1">
+                            <span className="font-semibold">Resultado: </span>
+                            {log.value_numeric !== undefined ? log.value_numeric : log.value_text}
+                            {log.unit && ` ${log.unit}`}
+                          </p>
+                          {log.note && <p className="text-sm mt-1 italic">{log.note}</p>}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}

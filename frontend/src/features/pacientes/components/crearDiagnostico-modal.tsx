@@ -127,6 +127,8 @@ export default function DiagnosisModal({ patient, onClose, onSave }: DiagnosisMo
   const {
     register,
     handleSubmit,
+    setError,
+    clearErrors,
     formState: { isSubmitting }
   } = useForm<DiagnosisFormData>({
     defaultValues: {
@@ -196,6 +198,8 @@ export default function DiagnosisModal({ patient, onClose, onSave }: DiagnosisMo
     setSelectedSymptoms([...selectedSymptoms, symptom])
     setSymptomSearch('')
     setShowSymptomDropdown(false)
+    // Limpiar error de validación si existe
+    clearErrors('notes') // Usamos 'notes' como proxy para errores custom
   }
 
   // Eliminar síntoma
@@ -210,6 +214,8 @@ export default function DiagnosisModal({ patient, onClose, onSave }: DiagnosisMo
     setSelectedSigns([...selectedSigns, { ...sign, unit, value: '' }])
     setSignSearch('')
     setShowSignDropdown(false)
+    // Limpiar error de validación si existe
+    clearErrors('notes')
   }
 
   // Eliminar signo
@@ -245,89 +251,108 @@ export default function DiagnosisModal({ patient, onClose, onSave }: DiagnosisMo
 
   const onSubmit = async (data: DiagnosisFormData) => {
     try {
-      // Validaciones
-      if (selectedSymptoms.length === 0) {
-        alert('Debe seleccionar al menos un síntoma')
-        return
-      }
-
+      // Validaciones - Signos obligatorios
       if (selectedSigns.length === 0) {
-        alert('Debe registrar al menos un signo')
+        setError('notes', { 
+          type: 'manual', 
+          message: 'Debe registrar al menos un signo vital' 
+        })
+        alert('Debe registrar al menos un signo vital')
         return
       }
 
       // Validar que todos los signos tengan valores
       const emptySigns = selectedSigns.filter(s => !s.value.trim())
       if (emptySigns.length > 0) {
+        setError('notes', { 
+          type: 'manual', 
+          message: 'Todos los signos deben tener un valor registrado' 
+        })
         alert('Todos los signos deben tener un valor registrado')
         return
       }
 
-      // Validar que todas las pruebas de laboratorio tengan valores
+      // Validar que todas las pruebas de laboratorio tengan valores (si se agregaron)
       const emptyLabTests = selectedLabTests.filter(t => !t.value.trim())
       if (emptyLabTests.length > 0) {
-        alert('Todas las pruebas de laboratorio deben tener un valor registrado')
+        setError('notes', { 
+          type: 'manual', 
+          message: 'Todas las pruebas de laboratorio agregadas deben tener un valor registrado' 
+        })
+        alert('Todas las pruebas de laboratorio agregadas deben tener un valor registrado')
         return
       }
 
-      // Construir el payload estructurado para el motor de inferencia
+      // Construir los datos en formato que el backend espera (arrays de objetos)
+      const symptomsData = selectedSymptoms.map(s => ({
+        symptom_id: s.id,
+        note: undefined
+      }))
+
+      const signsData = selectedSigns.map(s => {
+        const numericValue = parseFloat(s.value)
+        return {
+          sign_id: s.id,
+          value_numeric: !isNaN(numericValue) ? numericValue : undefined,
+          value_text: isNaN(numericValue) ? s.value : undefined,
+          unit: s.unit || undefined,
+          note: undefined
+        }
+      })
+
+      const labResultsData = selectedLabTests.length > 0 ? selectedLabTests.map(t => {
+        const numericValue = parseFloat(t.value)
+        return {
+          lab_test_id: t.id,
+          value_numeric: !isNaN(numericValue) ? numericValue : undefined,
+          value_text: isNaN(numericValue) ? t.value : undefined,
+          unit: t.unit || undefined,
+          note: undefined
+        }
+      }) : undefined
+
+      // El backend espera 'symptoms' y 'signs' (arrays, NO strings)
       const payload = {
         patient_id: patient.id,
-        symptoms: selectedSymptoms.map(s => ({
-          symptom_id: s.id,
-          note: undefined
-        })),
-        signs: selectedSigns.map(s => {
-          // Intentar parsear como número
-          const numericValue = parseFloat(s.value)
-          return {
-            sign_id: s.id,
-            value_numeric: !isNaN(numericValue) ? numericValue : undefined,
-            value_text: isNaN(numericValue) ? s.value : undefined,
-            unit: s.unit || undefined,
-            note: undefined
-          }
-        }),
-        lab_results: selectedLabTests.length > 0 ? selectedLabTests.map(t => {
-          // Intentar parsear como número
-          const numericValue = parseFloat(t.value)
-          return {
-            lab_test_id: t.id,
-            value_numeric: !isNaN(numericValue) ? numericValue : undefined,
-            value_text: isNaN(numericValue) ? t.value : undefined,
-            unit: t.unit || undefined,
-            note: undefined
-          }
-        }) : undefined,
+        symptoms: symptomsData, // Array de objetos (puede estar vacío)
+        signs: signsData,        // Array de objetos (obligatorio, mínimo 1)
+        lab_results: labResultsData, // Array de objetos o undefined
         notes: data.notes || undefined
       }
       
+      console.log('📤 Sending payload:', payload)
+      
       // Usar apiClient.post correctamente (endpoint: string, data: unknown)
       const responseData = await apiClient.post<{ data: any }>('/api/diagnoses', payload)
+      
+      console.log('📥 Response:', responseData)
       
       // Mostrar resultado del diagnóstico
       if (responseData?.data) {
         const result = responseData.data
         const message = `✅ Diagnóstico creado exitosamente\n\n` +
-          `🏥 Enfermedad: ${result.disease_name} (${result.disease_code})\n` +
-          `📊 Confianza: ${result.confidence_score}%\n\n` +
-          `💊 Tratamiento:\n${result.treatment}\n\n` +
+          `ID: ${result.id}\n` +
+          (result.disease_name ? `🏥 Enfermedad: ${result.disease_name} (${result.disease_code})\n` : '') +
+          (result.confidence_score ? `📊 Confianza: ${result.confidence_score}%\n` : '') +
+          (result.treatment ? `\n💊 Tratamiento:\n${result.treatment}\n` : '') +
           (result.alternative_diagnoses?.length > 0 
-            ? `🔄 Diagnósticos alternativos:\n${result.alternative_diagnoses.map((alt: any, i: number) => 
+            ? `\n🔄 Diagnósticos alternativos:\n${result.alternative_diagnoses.map((alt: any, i: number) => 
                 `${i + 1}. ${alt.disease_name} (${alt.confidence}%)`
               ).join('\n')}`
             : '')
         
         alert(message)
+      } else {
+        alert('✅ Diagnóstico creado exitosamente')
       }
       
       onSave()
     } catch (error: any) {
-      console.error('Error creating diagnosis:', error)
+      console.error('❌ Error creating diagnosis:', error)
       
       // El error ya viene procesado por apiClient.request()
       const errorMessage = error.message || 'Error al crear el diagnóstico'
-      alert(errorMessage)
+      alert(`Error: ${errorMessage}`)
     }
   }
 
@@ -353,11 +378,11 @@ export default function DiagnosisModal({ patient, onClose, onSave }: DiagnosisMo
           {/* SÍNTOMAS */}
           <div className="form-control" ref={symptomDropdownRef}>
             <div className="divider">
-              <span className="text-sm font-semibold">Síntomas Presentados *</span>
+              <span className="text-sm font-semibold">Síntomas Presentados (Opcional)</span>
             </div>
             
             <label className="label-text mb-2 block text-xs text-base-content/70">
-              Seleccione los síntomas reportados por el paciente
+              Seleccione los síntomas reportados por el paciente (opcional - para chequeos normales puede dejarse vacío)
             </label>
 
             {/* Selector de síntomas */}
@@ -400,7 +425,7 @@ export default function DiagnosisModal({ patient, onClose, onSave }: DiagnosisMo
             {/* Badges de síntomas seleccionados */}
             <div className="flex flex-wrap gap-2 mt-3 min-h-8">
               {selectedSymptoms.length === 0 ? (
-                <span className="text-sm text-base-content/50 italic">No hay síntomas seleccionados</span>
+                <span className="text-sm text-base-content/50 italic">No hay síntomas seleccionados (chequeo normal)</span>
               ) : (
                 selectedSymptoms.map((symptom) => (
                   <div key={symptom.id} className="badge badge-primary gap-2 p-3">
@@ -425,14 +450,14 @@ export default function DiagnosisModal({ patient, onClose, onSave }: DiagnosisMo
             </div>
             
             <label className="label-text mb-2 block text-xs text-base-content/70">
-              Seleccione los signos clínicos y registre sus valores
+              Seleccione los signos clínicos y registre sus valores (obligatorio - mínimo 1 signo vital)
             </label>
 
             {/* Selector de signos */}
             <div className="relative">
               <input
                 type="text"
-                className="input input-bordered w-full pr-10"
+                className={`input input-bordered w-full pr-10 ${selectedSigns.length === 0 ? 'input-warning' : ''}`}
                 placeholder="Buscar signo... (Ej: Temperatura, Presión arterial)"
                 value={signSearch}
                 onChange={(e) => setSignSearch(e.target.value)}
@@ -468,25 +493,32 @@ export default function DiagnosisModal({ patient, onClose, onSave }: DiagnosisMo
             {/* Inputs de signos seleccionados */}
             <div className="space-y-3 mt-3">
               {selectedSigns.length === 0 ? (
-                <span className="text-sm text-base-content/50 italic">No hay signos registrados</span>
+                <div className="alert alert-warning shadow-lg">
+                  <span className="text-sm">⚠️ No hay signos registrados. Debe agregar al menos un signo vital.</span>
+                </div>
               ) : (
                 selectedSigns.map((sign) => (
                   <div key={sign.id} className="flex gap-2 items-end">
                     <div className="flex-1">
                       <label className="label-text text-sm font-medium block mb-1">
-                        {sign.name}
+                        {sign.name} <span className="text-error">*</span>
                       </label>
                       <div className="flex gap-2">
                         <input
                           type="text"
-                          className="input input-bordered flex-1"
+                          className={`input input-bordered flex-1 ${!sign.value.trim() ? 'input-error' : ''}`}
                           value={sign.value}
                           onChange={(e) => updateSignValue(sign.id, e.target.value)}
+                          placeholder="Ingrese valor"
+                          required
                         />
                         <span className="px-3 py-2 bg-base-200 rounded-lg text-sm flex items-center min-w-[60px] justify-center">
                           {sign.unit}
                         </span>
                       </div>
+                      {!sign.value.trim() && (
+                        <span className="text-error text-xs mt-1 block">Este campo es obligatorio</span>
+                      )}
                     </div>
                     <button
                       type="button"
@@ -551,25 +583,30 @@ export default function DiagnosisModal({ patient, onClose, onSave }: DiagnosisMo
             {/* Inputs de pruebas seleccionadas */}
             <div className="space-y-3 mt-3">
               {selectedLabTests.length === 0 ? (
-                <span className="text-sm text-base-content/50 italic">No hay pruebas de laboratorio registradas</span>
+                <span className="text-sm text-base-content/50 italic">No hay pruebas de laboratorio registradas (opcional)</span>
               ) : (
                 selectedLabTests.map((test) => (
                   <div key={test.id} className="flex gap-2 items-end">
                     <div className="flex-1">
                       <label className="label-text text-sm font-medium block mb-1">
-                        {test.name} ({test.code})
+                        {test.name} ({test.code}) <span className="text-error">*</span>
                       </label>
                       <div className="flex gap-2">
                         <input
                           type="text"
-                          className="input input-bordered flex-1"
+                          className={`input input-bordered flex-1 ${!test.value.trim() ? 'input-error' : ''}`}
                           value={test.value}
                           onChange={(e) => updateLabTestValue(test.id, e.target.value)}
+                          placeholder="Ingrese resultado"
+                          required
                         />
                         <span className="px-3 py-2 bg-base-200 rounded-lg text-sm flex items-center min-w-[60px] justify-center">
                           {test.unit}
                         </span>
                       </div>
+                      {!test.value.trim() && (
+                        <span className="text-error text-xs mt-1 block">Este campo es obligatorio</span>
+                      )}
                     </div>
                     <button
                       type="button"

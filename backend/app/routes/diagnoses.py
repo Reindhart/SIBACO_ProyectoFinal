@@ -62,7 +62,7 @@ def get_patient_diagnoses(patient_id):
                 'id': doctor.id,
                 'username': doctor.username,
                 'first_name': doctor.first_name,
-                'last_name': doctor.last_name
+                'paternal_surname': doctor.paternal_surname
             } if doctor else None
             
             # Obtener información de la enfermedad
@@ -79,9 +79,11 @@ def get_patient_diagnoses(patient_id):
                 'doctor_id': d.doctor_id,
                 'disease_code': d.disease_code,
                 'diagnosis_date': d.diagnosis_date.isoformat() if d.diagnosis_date else None,
-                'symptoms_presented': d.symptoms_presented,
-                'signs_observed': d.signs_observed,
-                'lab_results': d.lab_results,
+                'visit_id': d.visit_id,
+                # Obtener logs de síntomas, signos y resultados de laboratorio
+                'symptoms_logs': [s.to_dict() for s in d.symptoms_logs.all()],
+                'signs_logs': [s.to_dict() for s in d.signs_logs.all()],
+                'lab_results_logs': [l.to_dict() for l in d.lab_results_logs.all()],
                 'confidence_score': d.confidence_score,
                 'inference_details': d.inference_details,
                 'alternative_diseases': d.alternative_diseases,
@@ -197,7 +199,7 @@ def get_diagnosis(diagnosis_id):
                 'id': doctor.id,
                 'username': doctor.username,
                 'first_name': doctor.first_name,
-                'last_name': doctor.last_name
+                'paternal_surname': doctor.paternal_surname
             } if doctor else None,
             'disease': {
                 'id': disease.id,
@@ -207,7 +209,7 @@ def get_diagnosis(diagnosis_id):
             'patient': {
                 'id': patient.id,
                 'first_name': patient.first_name,
-                'last_name': patient.last_name
+                'paternal_surname': patient.paternal_surname
             } if patient else None
         }
         
@@ -394,20 +396,36 @@ def create_diagnosis():
         
         db.session.commit()
         
-        # Obtener información de la enfermedad diagnosticada
+        # Obtener información completa de la enfermedad para la respuesta
         disease = db.session.get(Disease, inferred_disease_code)
+        disease_data = {
+            'code': disease.code,
+            'name': disease.name,
+            'description': disease.description
+        } if disease else None
         
+        # Devolver datos completos del diagnóstico creado
         return jsonify({
             'status': 'success',
             'message': 'Diagnóstico creado correctamente',
             'data': {
                 'id': diagnosis.id,
-                'visit_id': visit_id,
-                'disease_code': inferred_disease_code,
-                'disease_name': disease.name if disease else None,
-                'confidence_score': confidence_score,
-                'alternative_diagnoses': inference_result['alternative_diagnoses'][:3],  # Top 3
-                'treatment': inferred_treatment[:200] + '...' if len(inferred_treatment) > 200 else inferred_treatment
+                'patient_id': diagnosis.patient_id,
+                'disease_code': diagnosis.disease_code,
+                'disease_name': disease.name if disease else 'Desconocida',
+                'confidence_score': diagnosis.confidence_score or 0,
+                'treatment': diagnosis.treatment,
+                'diagnosis_date': diagnosis.diagnosis_date.isoformat() if diagnosis.diagnosis_date else None,
+                'status': diagnosis.status,
+                'notes': diagnosis.notes,
+                'visit_id': diagnosis.visit_id,
+                # Obtener logs en lugar de campos antiguos
+                'symptoms_logs': [s.to_dict() for s in diagnosis.symptoms_logs.all()],
+                'signs_logs': [s.to_dict() for s in diagnosis.signs_logs.all()],
+                'lab_results_logs': [l.to_dict() for l in diagnosis.lab_results_logs.all()],
+                'alternative_diseases': diagnosis.alternative_diseases,
+                'inference_details': diagnosis.inference_details,
+                'disease': disease_data
             }
         }), 201
         
@@ -432,17 +450,13 @@ def update_diagnosis(diagnosis_id):
         
         data = request.get_json()
         
-        # Actualizar campos permitidos
+        # Actualizar campos permitidos del diagnóstico
+        # NOTA: symptoms_presented, signs_observed y lab_results ya no existen
+        # Ahora se usan las tablas *_logs que no se actualizan desde aquí
         if 'disease_code' in data:
             diagnosis.disease_code = data['disease_code']
         if 'diagnosis_date' in data:
             diagnosis.diagnosis_date = datetime.fromisoformat(data['diagnosis_date'])
-        if 'symptoms_presented' in data:
-            diagnosis.symptoms_presented = data['symptoms_presented']
-        if 'signs_observed' in data:
-            diagnosis.signs_observed = data['signs_observed']
-        if 'lab_results' in data:
-            diagnosis.lab_results = data['lab_results']
         if 'confidence_score' in data:
             diagnosis.confidence_score = data['confidence_score']
         if 'inference_details' in data:

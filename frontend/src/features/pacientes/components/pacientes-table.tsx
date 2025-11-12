@@ -44,11 +44,40 @@ export type Diagnosis = {
   id: number
   patient_id: number
   doctor_id: number
-  disease_id: number
+  disease_code: string
   diagnosis_date: string
-  symptoms_presented?: string
-  signs_observed?: string
-  lab_results?: string
+  visit_id?: string
+  // Ahora usa logs en lugar de campos directos
+  symptoms_logs?: Array<{
+    log_id: number
+    symptom_id: number
+    symptom_name?: string
+    symptom_code?: string
+    recorded_at?: string
+    note?: string
+  }>
+  signs_logs?: Array<{
+    log_id: number
+    sign_id: number
+    sign_name?: string
+    sign_code?: string
+    value_numeric?: number
+    value_text?: string
+    unit?: string
+    recorded_at?: string
+    note?: string
+  }>
+  lab_results_logs?: Array<{
+    log_id: number
+    lab_test_id: number
+    lab_test_name?: string
+    lab_test_code?: string
+    value_numeric?: number
+    value_text?: string
+    unit?: string
+    recorded_at?: string
+    note?: string
+  }>
   confidence_score?: number
   inference_details?: string
   alternative_diseases?: string
@@ -71,6 +100,8 @@ export default function PatientsTable() {
   const [diagnosesLoading, setDiagnosesLoading] = useState<Record<number, boolean>>({})
   // Cache TTL: guardar timestamp de cuando se cargaron los diagnósticos
   const [diagnosesCache, setDiagnosesCache] = useState<Record<number, number>>({})
+  // Estado para almacenar el último diagnóstico de cada paciente (para el botón rápido)
+  const [lastDiagnosis, setLastDiagnosis] = useState<Record<number, Diagnosis | null>>({})
   const CACHE_TTL = 5 * 60 * 1000 // 5 minutos en milisegundos
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -130,14 +161,46 @@ export default function PatientsTable() {
       }>(url)
 
       // Cuando hay filtros, backend devolverá los pacientes coincidentes (posiblemente con page_size grande)
-      setPatients(response.data || [])
-      setTotalCount(response.pagination?.total_count ?? (response.data || []).length)
+      const loadedPatients = response.data || []
+      setPatients(loadedPatients)
+      setTotalCount(response.pagination?.total_count ?? loadedPatients.length)
+
+      // Cargar el último diagnóstico de cada paciente (para habilitar el botón)
+      await fetchLastDiagnosesForPatients(loadedPatients)
     } catch (err: any) {
       setError(err.message || 'Error al cargar pacientes')
       console.error('Error fetching patients:', err)
     } finally {
       setLoading(false)
     }
+  }
+
+  // Cargar el último diagnóstico de cada paciente (sin bloquear la UI)
+  const fetchLastDiagnosesForPatients = async (patientsToLoad: Patient[]) => {
+    // Cargar en paralelo pero sin bloquear
+    const promises = patientsToLoad.map(async (patient) => {
+      try {
+        const response = await apiClient.get<{ status: string; data: Diagnosis[] }>(
+          `/api/patients/${patient.id}/diagnoses?page=1&page_size=1`
+        )
+        const patientDiagnoses = response.data || []
+        if (patientDiagnoses.length > 0) {
+          // Guardar el más reciente
+          const latest = patientDiagnoses.sort((a, b) => 
+            new Date(b.diagnosis_date).getTime() - new Date(a.diagnosis_date).getTime()
+          )[0]
+          setLastDiagnosis(prev => ({ ...prev, [patient.id]: latest }))
+        } else {
+          setLastDiagnosis(prev => ({ ...prev, [patient.id]: null }))
+        }
+      } catch (err) {
+        console.error(`Error fetching last diagnosis for patient ${patient.id}:`, err)
+        setLastDiagnosis(prev => ({ ...prev, [patient.id]: null }))
+      }
+    })
+    
+    // No esperamos, dejamos que se carguen en background
+    Promise.all(promises).catch(err => console.error('Error loading last diagnoses:', err))
   }
 
   // Cargar diagnósticos de un paciente
@@ -252,14 +315,38 @@ export default function PatientsTable() {
     setSelectedPatientForDiagnosis(null)
   }
 
-  const handleSaveDiagnosis = async () => {
+  const handleSaveDiagnosis = async (diagnosisId?: number) => {
     if (selectedPatientForDiagnosis) {
+      // Refrescar diagnósticos del paciente
       await fetchPatientDiagnoses(selectedPatientForDiagnosis.id)
+      
+      // Si se recibió un ID de diagnóstico, abrirlo automáticamente
+      if (diagnosisId) {
+        try {
+          // Obtener el diagnóstico completo desde el backend
+          const response = await apiClient.get<{ status: string; data: any }>(`/api/diagnoses/${diagnosisId}`)
+          if (response?.data) {
+            setSelectedDiagnosis(response.data)
+            setIsDiagnosisDetailModalOpen(true)
+          }
+        } catch (error) {
+          console.error('Error fetching diagnosis details:', error)
+        }
+      }
     }
     handleCloseDiagnosisModal()
   }
 
   const handleViewLastDiagnosis = async (patient: Patient) => {
+    // Primero verificar si ya tenemos el último diagnóstico cargado
+    const cachedLastDiagnosis = lastDiagnosis[patient.id]
+    if (cachedLastDiagnosis) {
+      setSelectedDiagnosis(cachedLastDiagnosis)
+      setIsDiagnosisDetailModalOpen(true)
+      return
+    }
+
+    // Si no está en cache, cargar todos los diagnósticos del paciente
     if (!diagnoses[patient.id]) {
       await fetchPatientDiagnoses(patient.id)
     }
@@ -474,6 +561,7 @@ export default function PatientsTable() {
                 const isExpanded = expandedRows.has(patient.id)
                 const patientDiagnoses = diagnoses[patient.id] || []
                 const diseases = getPatientDiseases(patient.id)
+                const hasLastDiagnosis = lastDiagnosis[patient.id] !== undefined && lastDiagnosis[patient.id] !== null
                 
                 return (
                   <Fragment key={patient.id}>
@@ -510,7 +598,18 @@ export default function PatientsTable() {
                       <td>{patient.paternal_surname || ''}</td>
                       <td>{patient.maternal_surname || ''}</td>
                       <td>
-                        {diseases.length > 0 ? (
+                        {hasLastDiagnosis && lastDiagnosis[patient.id]?.disease ? (
+                          <div className="flex flex-wrap gap-1">
+                            <span className="badge badge-outline badge-sm">
+                              {lastDiagnosis[patient.id]!.disease!.name}
+                            </span>
+                            {diseases.length > 1 && (
+                              <span className="badge badge-ghost badge-sm">
+                                +{diseases.length - 1} más
+                              </span>
+                            )}
+                          </div>
+                        ) : diseases.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
                             {diseases.map((disease) => (
                               <span key={disease} className="badge badge-outline badge-sm">
@@ -542,7 +641,7 @@ export default function PatientsTable() {
                             className="btn btn-ghost btn-circle btn-sm"
                             onClick={(e) => { e.stopPropagation(); handleViewLastDiagnosis(patient); }}
                             title="Ver último diagnóstico"
-                            disabled={diseases.length === 0}
+                            disabled={!hasLastDiagnosis}
                           >
                             <FileText className="h-4 w-4" />
                           </button>

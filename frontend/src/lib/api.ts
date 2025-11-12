@@ -21,7 +21,10 @@ class ApiClient {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const url = `${this.baseURL}${endpoint}`
+    // Normalizar para evitar dobles slashes si baseURL termina con '/' y endpoint empieza con '/'
+    const base = this.baseURL.replace(/\/+$/, '') // Eliminar todas las barras finales
+    const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`
+    const url = `${base}${path}`
     
     // Preparar headers base
     const headers: Record<string, string> = {
